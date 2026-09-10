@@ -96,9 +96,10 @@ async def api_social_webhook(self, request):
     static_token = await self.config.api_token()
     static_ok = bool(static_token and token and hmac.compare_digest(token, static_token))
     if not static_ok:
-        # Dashboard test signals use the normal OAuth bearer session. External
-        # providers should use the static X-Sentinel-Webhook token instead.
-        await self._auth(request, int(guild_id) if guild_id else None)
+        # OAuth dashboard calls must always name exactly one target guild.
+        if not guild_id:
+            raise web.HTTPBadRequest(text="guild_id is required for authenticated dashboard social events.")
+        await self._auth(request, int(guild_id))
 
     provider, external_id, author, title, url, normalized = _provider_item(data)
     item = {
