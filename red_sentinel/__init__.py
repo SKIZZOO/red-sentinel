@@ -2,6 +2,7 @@ from .red_sentinel import RedSentinel
 from .oauth_setup import SentinelOAuthSetup
 from .enhancements import SentinelEnhancements, patch_red_sentinel
 from .server_patch import patch_server_api
+from .server_control import patch_server_control
 
 _original_init=RedSentinel.__init__;_original_oauth_callback=RedSentinel.oauth_callback
 
@@ -40,9 +41,7 @@ async def _auth_fixed(self,request,guild_id=None):
     self.sessions[token]=n
     if guild_id is not None:
         gid=int(guild_id);guild=self.bot.get_guild(gid)
-        if guild is None:
-            try:guild=await self.bot.fetch_guild(gid,with_counts=True)
-            except Exception:raise web.HTTPNotFound(text=f"Guild not found: {gid}")
+        if guild is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}. The bot must be online in this server.")
         if gid not in n["guild_ids"] and not await _member_can_manage(self,guild,n["user_id"]):raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
     return n
 async def _persist_sessions(self):
@@ -69,9 +68,8 @@ async def _api_guilds(self,request):
     result.sort(key=lambda x:x["name"].lower());return web.json_response(result)
 async def _api_guild(self,request):
     from aiohttp import web
-    gid=int(request.match_info["guild_id"]);await self._auth(request,gid)
-    try:g=self.bot.get_guild(gid) or await self.bot.fetch_guild(gid,with_counts=True)
-    except Exception:raise web.HTTPNotFound(text=f"Guild not found: {gid}")
+    gid=int(request.match_info["guild_id"]);await self._auth(request,gid);g=self.bot.get_guild(gid)
+    if g is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
     return web.json_response({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if getattr(g,"icon",None) else None,"member_count":await _guild_count(self,g),"channels":[{"id":int(c.id),"name":c.name,"type":str(c.type)} for c in getattr(g,"channels",[])],"roles":[{"id":int(r.id),"name":r.name,"position":r.position} for r in getattr(g,"roles",[]) if not r.is_default()]})
 async def _start_web_fixed(self):
     from aiohttp import web
@@ -82,6 +80,6 @@ async def _start_web_fixed(self):
         web.get("/api/guilds/{guild_id}/config",self.api_get_config),web.put("/api/guilds/{guild_id}/config",self.api_put_config),web.get("/api/guilds/{guild_id}",self.api_guild),web.post("/api/guilds/{guild_id}/announce",self.api_announce),web.post("/api/guilds/{guild_id}/moderation/ban",self.api_ban),web.post("/api/guilds/{guild_id}/moderation/kick",self.api_kick),web.post("/api/guilds/{guild_id}/moderation/timeout",self.api_timeout),web.post("/api/guilds/{guild_id}/moderation/delete",self.api_delete),web.post("/api/webhooks/social",self.api_social_webhook),web.get("/oauth/discord/start",self.oauth_start),web.get("/oauth/discord/callback",self.oauth_callback),web.get("/api/me",self.api_me)
     ])
     app.middlewares.append(self.cors_middleware);self.runner=web.AppRunner(app);await self.runner.setup();host=await self.config.host();port=await self.config.port();self.site=web.TCPSite(self.runner,host,port);await self.site.start();__import__("logging").getLogger("red_sentinel").info("Red Sentinel API listening on %s:%s",host,port)
-RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel)
+RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel)
 async def setup(bot):
     await bot.add_cog(RedSentinel(bot));await bot.add_cog(SentinelOAuthSetup(bot));await bot.add_cog(SentinelEnhancements(bot))
