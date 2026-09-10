@@ -1,17 +1,43 @@
 from .red_sentinel import RedSentinel
 from .oauth_setup import SentinelOAuthSetup
 
-# Dashboard hardening: persist OAuth sessions, normalize Discord snowflake IDs,
-# authorize users by their actual Discord permissions, and keep all dashboard routes active.
+# Dashboard hardening: persist OAuth sessions and resolve server access from
+# the actual Discord guild/member state instead of trusting a stale OAuth list.
 _original_init = RedSentinel.__init__
 _original_oauth_callback = RedSentinel.oauth_callback
-_original_api_get_config = RedSentinel.api_get_config
-_original_api_put_config = RedSentinel.api_put_config
 
 
 def _persistent_init(self, bot):
     _original_init(self, bot)
     self.config.register_global(web_sessions={})
+
+
+async def _load_session(self, token):
+    if not token:
+        return None
+    session = self.sessions.get(token)
+    if session and session.get("expires_at", 0) > __import__("time").time():
+        return session
+    stored = await self.config.web_sessions()
+    if isinstance(stored, dict):
+        session = stored.get(token)
+        if session and session.get("expires_at", 0) > __import__("time").time():
+            self.sessions[token] = session
+            return session
+    return None
+
+
+async def _member_can_manage(self, guild, user_id):
+    if not user_id:
+        return False
+    member = guild.get_member(int(user_id))
+    if member is None:
+        try:
+            member = await guild.fetch_member(int(user_id))
+        except Exception:
+            return False
+    perms = member.guild_permissions
+    return bool(perms.administrator or perms.manage_guild)
 
 
 async def _auth_fixed(self, request, guild_id=None):
@@ -23,49 +49,36 @@ async def _auth_fixed(self, request, guild_id=None):
     token = auth.removeprefix("Bearer ").strip()
     static_token = await self.config.api_token()
 
-    if token and token not in self.sessions:
-        stored = await self.config.web_sessions()
-        if isinstance(stored, dict):
-            session = stored.get(token)
-            if session and session.get("expires_at", 0) > time.time():
-                self.sessions[token] = session
-
-    session = self.sessions.get(token)
-    if session and session.get("expires_at", 0) > time.time():
-        normalized = dict(session)
+    if static_token and token:
         try:
-            normalized["guild_ids"] = [int(x) for x in session.get("guild_ids", [])]
-        except (TypeError, ValueError):
-            normalized["guild_ids"] = []
-        self.sessions[token] = normalized
+            if hmac.compare_digest(token, static_token):
+                return {"user_id": 0, "guild_ids": [int(guild_id)] if guild_id is not None else []}
+        except Exception:
+            pass
 
-        if guild_id is not None:
-            gid = int(guild_id)
-            if gid not in normalized["guild_ids"]:
-                # OAuth guild lists can be stale or incomplete. The bot itself is
-                # the source of truth for the server, and Discord permissions are
-                # checked before granting dashboard access.
-                guild = self.bot.get_guild(gid)
-                if guild is None:
-                    raise web.HTTPNotFound(text="Guild not found.")
-                member = guild.get_member(int(normalized.get("user_id", 0)))
-                if member is None:
-                    try:
-                        member = await guild.fetch_member(int(normalized.get("user_id", 0)))
-                    except Exception:
-                        member = None
-                if not member or not (
-                    member.guild_permissions.administrator
-                    or member.guild_permissions.manage_guild
-                ):
-                    raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
+    session = await _load_session(self, token)
+    if not session:
+        raise web.HTTPUnauthorized(text="Authentication required.")
 
-        return normalized
+    normalized = dict(session)
+    normalized["user_id"] = int(normalized.get("user_id", 0))
+    try:
+        normalized["guild_ids"] = [int(x) for x in normalized.get("guild_ids", [])]
+    except (TypeError, ValueError):
+        normalized["guild_ids"] = []
+    self.sessions[token] = normalized
 
-    if static_token and token and hmac.compare_digest(token, static_token):
-        return {"user_id": 0, "guild_ids": [int(guild_id)] if guild_id is not None else []}
+    if guild_id is not None:
+        gid = int(guild_id)
+        guild = self.bot.get_guild(gid)
+        if guild is None:
+            raise web.HTTPNotFound(text="Guild not found.")
+        # Do not trust the cached OAuth guild list. Check the actual member
+        # permissions in the guild currently connected to this bot.
+        if not await _member_can_manage(self, guild, normalized["user_id"]):
+            raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
 
-    raise web.HTTPUnauthorized(text="Authentication required.")
+    return normalized
 
 
 async def _persistent_oauth_callback(self, request):
@@ -74,7 +87,7 @@ async def _persistent_oauth_callback(self, request):
     if not isinstance(stored, dict):
         stored = {}
     now = __import__("time").time()
-    stored = {k: v for k, v in stored.items() if v.get("expires_at", 0) > now}
+    stored = {k: v for k, v in stored.items() if isinstance(v, dict) and v.get("expires_at", 0) > now}
     for session in self.sessions.values():
         try:
             session["guild_ids"] = [int(x) for x in session.get("guild_ids", [])]
@@ -101,71 +114,72 @@ async def _guild_count(self, guild):
 
 
 async def _api_guilds(self, request):
+    from aiohttp import web
+
     session = await self._auth(request)
-    allowed = set(session.get("guild_ids", []))
+    user_id = int(session.get("user_id", 0))
     result = []
+
+    # The bot's guild cache is the source of truth: a dashboard can only
+    # manage a server where this bot is actually installed. For OAuth users,
+    # independently verify Administrator / Manage Server on every guild.
     for guild in self.bot.guilds:
-        if allowed and guild.id not in allowed:
+        if user_id and not await _member_can_manage(self, guild, user_id):
             continue
         result.append({
-            "id": guild.id,
+            "id": int(guild.id),
             "name": guild.name,
             "icon": str(guild.icon.url) if guild.icon else None,
             "member_count": await _guild_count(self, guild),
         })
-    return __import__("aiohttp").web.json_response(result)
+
+    result.sort(key=lambda x: x["name"].lower())
+    return web.json_response(result)
 
 
 async def _api_guild(self, request):
+    from aiohttp import web
     gid = int(request.match_info["guild_id"])
     await self._auth(request, gid)
     guild = self.bot.get_guild(gid)
-    if not guild:
-        raise __import__("aiohttp").web.HTTPNotFound(text="Guild not found.")
-    return __import__("aiohttp").web.json_response({
-        "id": guild.id,
+    if guild is None:
+        raise web.HTTPNotFound(text="Guild not found.")
+    return web.json_response({
+        "id": int(guild.id),
         "name": guild.name,
         "icon": str(guild.icon.url) if guild.icon else None,
         "member_count": await _guild_count(self, guild),
-        "channels": [{"id": c.id, "name": c.name, "type": str(c.type)} for c in guild.channels],
-        "roles": [{"id": r.id, "name": r.name, "position": r.position} for r in guild.roles if not r.is_default()],
+        "channels": [{"id": int(c.id), "name": c.name, "type": str(c.type)} for c in guild.channels],
+        "roles": [{"id": int(r.id), "name": r.name, "position": r.position} for r in guild.roles if not r.is_default()],
     })
 
 
 async def _api_get_config(self, request):
+    from aiohttp import web
     gid = int(request.match_info["guild_id"])
     guild = self.bot.get_guild(gid)
     if guild is None:
-        raise __import__("aiohttp").web.HTTPNotFound(text="Guild not found.")
+        raise web.HTTPNotFound(text="Guild not found.")
     await self._auth(request, gid)
-    return __import__("aiohttp").web.json_response({
+    return web.json_response({
         "providers": await self.config.providers(),
         "routes": await self.config.routes(),
     })
 
 
 async def _api_put_config(self, request):
+    from aiohttp import web
     gid = int(request.match_info["guild_id"])
     guild = self.bot.get_guild(gid)
     if guild is None:
-        raise __import__("aiohttp").web.HTTPNotFound(text="Guild not found.")
+        raise web.HTTPNotFound(text="Guild not found.")
     await self._auth(request, gid)
-    session = await self._auth(request, gid)
-    if session.get("user_id", 0):
-        member = guild.get_member(int(session["user_id"]))
-        if member is None:
-            try:
-                member = await guild.fetch_member(int(session["user_id"]))
-            except Exception:
-                member = None
-        if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):
-            raise __import__("aiohttp").web.HTTPForbidden(text="Administrator or Manage Server permission required.")
     data = await self._json(request)
     if "providers" in data:
         await self.config.providers.set(data["providers"])
     if "routes" in data:
         await self.config.routes.set(data["routes"])
-    return __import__("aiohttp").web.json_response({"ok": True})
+    return web.json_response({"ok": True})
 
 
 async def _start_web_fixed(self):
@@ -181,6 +195,7 @@ async def _start_web_fixed(self):
         web.post("/api/guilds/{guild_id}/announce", self.api_announce),
         web.post("/api/guilds/{guild_id}/moderation/ban", self.api_ban),
         web.post("/api/guilds/{guild_id}/moderation/kick", self.api_kick),
+        web.post("/api/guilds/{guild_id}/timeout", self.api_timeout),
         web.post("/api/guilds/{guild_id}/moderation/timeout", self.api_timeout),
         web.post("/api/guilds/{guild_id}/moderation/delete", self.api_delete),
         web.post("/api/webhooks/social", self.api_social_webhook),
