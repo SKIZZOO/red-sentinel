@@ -10,14 +10,15 @@
     const hint=document.querySelector('.chat-compose-foot span:nth-of-type(2)');
     const raw=room?.textContent?.trim()||'';
     if(!raw||raw==='Select a channel'||raw==='# channel')return;
-    const channel=raw.replace(/^#\s*/,'# ');
-    if(compose)compose.placeholder=`Message in ${channel}…`;
-    if(hint)hint.textContent=`Scrii în ${channel} · Enter pentru trimitere · Shift+Enter pentru rând nou`;
+    const name=raw.replace(/^#\s*/,'').trim();
+    if(!name)return;
+    if(compose)compose.placeholder=`Message #${name}…`;
+    if(hint)hint.textContent=`Scrii în #${name} · Enter pentru trimitere · Shift+Enter pentru rând nou`;
   };
   const clickWanted=()=>{
-    if(!wanted||!document.querySelector('#chatView')){syncComposer();return;}
+    if(!wanted||!document.querySelector('#chatView')){syncComposer();return}
     const current=String(active()||'');
-    if(current===String(wanted)){syncComposer();return;}
+    if(current===String(wanted)){syncComposer();return}
     const btn=[...document.querySelectorAll('.chat-channel')].find(b=>String(b.dataset.cid)===String(wanted));
     if(btn)btn.click();
     syncComposer();
@@ -36,6 +37,7 @@
   document.addEventListener('change',e=>{
     if(e.target?.id!=='guildSelect')return;
     wanted='';
+    setTimeout(syncComposer,500);
   },true);
   const watch=()=>{
     const box=document.querySelector('#chatChannelList');
