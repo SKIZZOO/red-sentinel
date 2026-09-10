@@ -9,6 +9,9 @@ async def _chat_channel(self, request):
     if not isinstance(channel,discord.TextChannel): raise web.HTTPBadRequest(text="Invalid text channel.")
     return guild,channel
 
+def _member_profile(m):
+    return {"id":str(m.id),"name":m.name,"display_name":m.display_name,"global_name":getattr(m,"global_name",None),"avatar":str(m.display_avatar.url) if m.display_avatar else None,"bot":bool(m.bot),"joined_at":m.joined_at.isoformat() if m.joined_at else None,"created_at":m.created_at.isoformat() if m.created_at else None,"roles":[{"id":str(r.id),"name":r.name,"position":r.position,"color":str(r.color) if r.color.value else None} for r in m.roles if not r.is_default()],"role_ids":[str(r.id) for r in m.roles if not r.is_default()],"timeout_until":m.timed_out_until.isoformat() if m.timed_out_until else None,"top_role":{"id":str(m.top_role.id),"name":m.top_role.name,"position":m.top_role.position} if m.top_role else None}
+
 async def api_channel_messages(self,request):
     guild,channel=await _chat_channel(self,request)
     try:
@@ -21,11 +24,25 @@ async def api_channel_messages(self,request):
     except discord.HTTPException as exc: raise web.HTTPBadRequest(text=f"Discord rejected channel history: {exc}")
     result=[]
     for m in reversed(messages):
+        author=m.author
+        member=guild.get_member(author.id)
+        roles=[{"id":str(r.id),"name":r.name,"position":r.position,"color":str(r.color) if r.color.value else None} for r in member.roles if not r.is_default()] if member else []
         embeds=[]
         for e in m.embeds:
             embeds.append({"title":e.title,"description":e.description,"url":e.url,"image":e.image.url if e.image else None,"thumbnail":e.thumbnail.url if e.thumbnail else None,"video":e.video.url if e.video else None})
-        result.append({"id":str(m.id),"author_id":str(m.author.id),"author":str(m.author),"display_name":getattr(m.author,"display_name",str(m.author)),"avatar":str(m.author.display_avatar.url) if getattr(m.author,"display_avatar",None) else None,"content":m.content or "","created_at":m.created_at.timestamp(),"edited_at":m.edited_at.timestamp() if m.edited_at else None,"attachments":[{"url":a.url,"name":a.filename,"content_type":a.content_type,"width":a.width,"height":a.height} for a in m.attachments],"embeds":embeds,"reply_to":str(m.reference.message_id) if m.reference and m.reference.message_id else None,"pinned":bool(m.pinned)})
+        result.append({"id":str(m.id),"author_id":str(author.id),"author":str(author),"display_name":getattr(author,"display_name",str(author)),"global_name":getattr(author,"global_name",None),"avatar":str(author.display_avatar.url) if getattr(author,"display_avatar",None) else None,"bot":bool(getattr(author,"bot",False)),"roles":roles,"top_role":roles[-1] if roles else None,"content":m.content or "","created_at":m.created_at.timestamp(),"edited_at":m.edited_at.timestamp() if m.edited_at else None,"attachments":[{"url":a.url,"name":a.filename,"content_type":a.content_type,"width":a.width,"height":a.height} for a in m.attachments],"embeds":embeds,"reply_to":str(m.reference.message_id) if m.reference and m.reference.message_id else None,"pinned":bool(m.pinned)})
     return web.json_response(result)
+
+async def api_chat_profile(self,request):
+    gid=int(request.match_info["guild_id"]);uid=int(request.match_info["user_id"]);guild=self.bot.get_guild(gid)
+    if guild is None: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
+    await self._auth(request,gid)
+    member=guild.get_member(uid)
+    if member is None:
+        try: member=await guild.fetch_member(uid)
+        except discord.NotFound: raise web.HTTPNotFound(text="Member not found.")
+        except discord.HTTPException as exc: raise web.HTTPBadRequest(text=f"Discord member lookup failed: {exc}")
+    return web.json_response(_member_profile(member))
 
 async def api_send_chat_message(self,request):
     guild,channel=await _chat_channel(self,request); await self._require_admin(request,guild); data=await self._json(request); content=str(data.get("content") or "").strip()
@@ -47,4 +64,4 @@ async def api_delete_chat_message(self,request):
     return web.json_response({"ok":True})
 
 def patch_chat_api(RedSentinel):
-    RedSentinel.api_channel_messages=api_channel_messages;RedSentinel.api_send_chat_message=api_send_chat_message;RedSentinel.api_delete_chat_message=api_delete_chat_message
+    RedSentinel.api_channel_messages=api_channel_messages;RedSentinel.api_chat_profile=api_chat_profile;RedSentinel.api_send_chat_message=api_send_chat_message;RedSentinel.api_delete_chat_message=api_delete_chat_message
