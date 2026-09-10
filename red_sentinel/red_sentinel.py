@@ -40,7 +40,7 @@ class RedSentinel(commands.Cog):
         self.config = Config.get_conf(self, identifier=947281163, force_registration=True)
         self.config.register_global(
             host="0.0.0.0",
-            port=2556,
+            port=27015,
             api_token="",
             public_base_url="",
             netlify_origin="",
@@ -394,28 +394,6 @@ class RedSentinel(commands.Cog):
     async def api_timeout(self, request):
         return await self._moderate(request, "timeout")
 
-    async def _moderate(self, request, action):
-        gid = int(request.match_info["guild_id"])
-        guild = self.bot.get_guild(gid)
-        if not guild:
-            raise web.HTTPNotFound(text="Guild not found.")
-        await self._require_admin(request, guild)
-        data = await self._json(request)
-        member = await self._member_from_payload(guild, data)
-        reason = data.get("reason") or "Red Sentinel web panel"
-        try:
-            if action == "ban":
-                await guild.ban(member, reason=reason, delete_message_seconds=min(int(data.get("delete_seconds", 0)), 604800))
-            elif action == "kick":
-                await guild.kick(member, reason=reason)
-            else:
-                seconds = max(1, min(int(data.get("seconds", 3600)), 2419200))
-                await member.timeout(discord.utils.utcnow() + timedelta(seconds=seconds), reason=reason)
-        except discord.Forbidden:
-            raise web.HTTPForbidden(text="Discord denied this action. Check bot role/permissions.")
-        await self._log_event(guild, f"moderation.{action}", target=member, payload={"reason": reason})
-        return web.json_response({"ok": True, "action": action, "user_id": member.id})
-
     async def api_delete(self, request):
         gid = int(request.match_info["guild_id"])
         guild = self.bot.get_guild(gid)
@@ -426,10 +404,33 @@ class RedSentinel(commands.Cog):
         channel = guild.get_channel(int(data["channel_id"]))
         if not isinstance(channel, discord.TextChannel):
             raise web.HTTPBadRequest(text="Invalid text channel.")
-        message = await channel.fetch_message(int(data["message_id"]))
-        await message.delete()
-        await self._log_event(guild, "moderation.delete", actor=None, channel=channel,
-                              payload={"message_id": message.id})
+        try:
+            msg = await channel.fetch_message(int(data["message_id"]))
+            await msg.delete()
+        except discord.NotFound:
+            raise web.HTTPNotFound(text="Message not found.")
+        await self._log_event(guild, "admin.delete", actor=None, channel=channel,
+                              payload={"message_id": msg.id})
+        return web.json_response({"ok": True})
+
+    async def _moderate(self, request, action: str):
+        gid = int(request.match_info["guild_id"])
+        guild = self.bot.get_guild(gid)
+        if not guild:
+            raise web.HTTPNotFound(text="Guild not found.")
+        await self._require_admin(request, guild)
+        data = await self._json(request)
+        member = await self._member_from_payload(guild, data)
+        reason = str(data.get("reason", "Red Sentinel dashboard action"))[:512]
+        if action == "ban":
+            await guild.ban(member, reason=reason)
+        elif action == "kick":
+            await guild.kick(member, reason=reason)
+        elif action == "timeout":
+            minutes = max(1, min(int(data.get("minutes", 10)), 40320))
+            await member.timeout(timedelta(minutes=minutes), reason=reason)
+        await self._log_event(guild, f"admin.{action}", actor=None, target=member,
+                              payload={"reason": reason, "minutes": data.get("minutes")})
         return web.json_response({"ok": True})
 
     async def api_get_config(self, request):
@@ -438,12 +439,9 @@ class RedSentinel(commands.Cog):
         if not guild:
             raise web.HTTPNotFound(text="Guild not found.")
         await self._require_admin(request, guild)
-        routes = await self.config.routes()
-        providers = await self.config.providers()
         return web.json_response({
-            "routes": routes.get(str(gid), {}),
-            "providers": providers,
-            "social_poll_seconds": await self.config.social_poll_seconds(),
+            "providers": await self.config.providers(),
+            "routes": await self.config.routes(),
         })
 
     async def api_put_config(self, request):
@@ -453,157 +451,132 @@ class RedSentinel(commands.Cog):
             raise web.HTTPNotFound(text="Guild not found.")
         await self._require_admin(request, guild)
         data = await self._json(request)
-        routes = await self.config.routes()
-        routes[str(gid)] = data.get("routes", routes.get(str(gid), {}))
-        await self.config.routes.set(routes)
-        if "social_poll_seconds" in data:
-            await self.config.social_poll_seconds.set(max(15, int(data["social_poll_seconds"])))
+        if "providers" in data:
+            await self.config.providers.set(data["providers"])
+        if "routes" in data:
+            await self.config.routes.set(data["routes"])
         return web.json_response({"ok": True})
 
-    # -------------------- OAuth --------------------
+    async def api_social_webhook(self, request):
+        token = request.headers.get("X-Sentinel-Webhook", "")
+        static_token = await self.config.api_token()
+        if not static_token or not hmac.compare_digest(token, static_token):
+            raise web.HTTPUnauthorized(text="Invalid webhook token.")
+        data = await self._json(request)
+        provider = str(data.get("provider", "unknown"))
+        external_id = str(data.get("external_id", secrets.token_hex(8)))
+        item = {
+            "provider": provider,
+            "external_id": external_id,
+            "author": data.get("author"),
+            "title": data.get("title"),
+            "url": data.get("url"),
+            "payload": data,
+            "created_at": int(time.time()),
+        }
+        await asyncio.to_thread(self._insert_social_item, item)
+        routes = await self.config.routes()
+        for route in routes.get(provider, []):
+            guild = self.bot.get_guild(int(route.get("guild_id", 0)))
+            channel = guild.get_channel(int(route.get("channel_id", 0))) if guild else None
+            if isinstance(channel, discord.TextChannel):
+                embed = discord.Embed(title=str(item.get("title") or provider), url=item.get("url"), description=str(item.get("author") or "")[:4096])
+                await channel.send(embed=embed)
+        return web.json_response({"ok": True})
+
+    def _insert_social_item(self, item):
+        assert self.db_path
+        with sqlite3.connect(self.db_path) as db:
+            db.execute("""
+                INSERT OR IGNORE INTO social_items
+                (provider, external_id, author, title, url, payload, created_at)
+                VALUES (?,?,?,?,?,?,?)
+            """, (item["provider"], item["external_id"], item["author"], item["title"], item["url"], json.dumps(item["payload"], default=str), item["created_at"]))
+            db.commit()
+
+    async def _social_loop(self):
+        while True:
+            await asyncio.sleep(max(15, int(await self.config.social_poll_seconds())))
+            now = time.time()
+            self.oauth_states = {k: v for k, v in self.oauth_states.items() if v > now}
+            self.sessions = {k: v for k, v in self.sessions.items() if v.get("expires_at", 0) > now}
+
+    # -------------------- oauth --------------------
 
     async def oauth_start(self, request):
         client_id = await self.config.oauth_client_id()
-        redirect = await self.config.oauth_redirect_uri()
-        if not client_id or not redirect:
-            raise web.HTTPNotImplemented(text="Discord OAuth is not configured. Use a static API token for a private install.")
-        state = secrets.token_urlsafe(32)
+        redirect_uri = await self.config.oauth_redirect_uri()
+        if not client_id or not redirect_uri:
+            raise web.HTTPBadRequest(text="Discord OAuth is not configured.")
+        state = secrets.token_urlsafe(24)
         self.oauth_states[state] = time.time() + 600
-        params = {
-            "client_id": client_id, "redirect_uri": redirect,
-            "response_type": "code", "scope": "identify guilds",
-        }
-        return web.HTTPFound("https://discord.com/oauth2/authorize?" + urlencode(params) + "&state=" + state)
+        params = urlencode({
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "identify guilds",
+        })
+        return web.HTTPFound("https://discord.com/oauth2/authorize?" + params + "&state=" + state)
 
     async def oauth_callback(self, request):
-        code, state = request.query.get("code"), request.query.get("state")
-        if not code or state not in self.oauth_states or self.oauth_states[state] < time.time():
+        code = request.query.get("code")
+        state = request.query.get("state")
+        if not code or not state or state not in self.oauth_states:
             raise web.HTTPBadRequest(text="Invalid OAuth state.")
         self.oauth_states.pop(state, None)
         client_id = await self.config.oauth_client_id()
-        secret = await self.config.oauth_client_secret()
-        redirect = await self.config.oauth_redirect_uri()
-        if not self.session:
-            raise web.HTTPServiceUnavailable()
-        async with self.session.post(
-            "https://discord.com/api/oauth2/token",
-            data={"client_id": client_id, "client_secret": secret, "grant_type": "authorization_code",
-                  "code": code, "redirect_uri": redirect},
-        ) as r:
-            token_data = await r.json()
-        if "access_token" not in token_data:
-            raise web.HTTPUnauthorized(text="Discord OAuth token exchange failed.")
-        headers = {"Authorization": f"Bearer {token_data['access_token']}"}
-        async with self.session.get("https://discord.com/api/users/@me", headers=headers) as r:
-            user = await r.json()
-        async with self.session.get("https://discord.com/api/users/@me/guilds", headers=headers) as r:
-            guilds = await r.json()
-        accessible = []
+        client_secret = await self.config.oauth_client_secret()
+        redirect_uri = await self.config.oauth_redirect_uri()
+        if not client_id or not client_secret or not redirect_uri or not self.session:
+            raise web.HTTPBadRequest(text="Discord OAuth is not configured.")
+        async with self.session.post("https://discord.com/api/oauth2/token", data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+        }) as resp:
+            token_data = await resp.json()
+        if resp.status >= 400:
+            raise web.HTTPBadGateway(text="Discord OAuth token exchange failed.")
+        access_token = token_data["access_token"]
+        headers = {"Authorization": f"Bearer {access_token}"}
+        async with self.session.get("https://discord.com/api/users/@me", headers=headers) as resp:
+            me = await resp.json()
+        async with self.session.get("https://discord.com/api/users/@me/guilds", headers=headers) as resp:
+            guilds = await resp.json()
+        bot_guilds = {g.id for g in self.bot.guilds}
+        allowed = []
         for g in guilds:
-            perms = int(g.get("permissions", 0))
-            if (perms & 0x8) or (perms & 0x20):
-                if self.bot.get_guild(int(g["id"])):
-                    accessible.append(int(g["id"]))
-        session_token = secrets.token_urlsafe(48)
-        self.sessions[session_token] = {
-            "user_id": int(user["id"]), "guild_ids": accessible,
-            "expires_at": time.time() + 3600,
-        }
-        frontend = await self.config.netlify_origin()
-        if not frontend:
-            frontend = "/"
-        location = frontend.rstrip("/") + "/#token=" + session_token
-        raise web.HTTPFound(location)
-
-    # -------------------- social integrations --------------------
-
-    async def api_social_webhook(self, request):
-        secret = await self.config.api_token()
-        provided = request.headers.get("X-Sentinel-Webhook", "")
-        if not secret or not hmac.compare_digest(provided, secret):
-            raise web.HTTPUnauthorized(text="Invalid webhook secret.")
-        data = await self._json(request)
-        provider = data.get("provider", "custom")
-        item = data.get("item", data)
-        await self._dispatch_social(provider, item)
-        return web.json_response({"ok": True})
-
-    async def _dispatch_social(self, provider: str, item: dict[str, Any]):
-        providers = await self.config.providers()
-        routes = await self.config.routes()
-        for guild_id, route in routes.items():
-            target_channel = route.get(provider)
-            if not target_channel:
-                continue
-            guild = self.bot.get_guild(int(guild_id))
-            channel = guild.get_channel(int(target_channel)) if guild else None
-            if not isinstance(channel, discord.TextChannel):
-                continue
-            title = item.get("title") or item.get("text") or f"{provider.title()} update"
-            url = item.get("url")
-            description = item.get("description") or item.get("text") or ""
-            embed_kwargs = {"title": title[:256], "description": description[:4096], "color": 0x7C5CFC,
-                            "timestamp": discord.utils.utcnow()}
-            if url:
-                embed_kwargs["url"] = str(url)
-            embed = discord.Embed(**embed_kwargs)
-            if item.get("author"):
-                embed.set_author(name=str(item["author"]))
-            if item.get("thumbnail"):
-                embed.set_thumbnail(url=item["thumbnail"])
-            if item.get("image"):
-                embed.set_image(url=item["image"])
-            embed.set_footer(text=f"Red Sentinel • {provider}")
-            await channel.send(embed=embed)
-
-    async def _social_loop(self):
-        await self.bot.wait_until_red_ready()
-        while True:
-            try:
-                await asyncio.sleep(max(15, int(await self.config.social_poll_seconds())))
-                await self._cleanup_sessions()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                log.exception("Social loop error")
-
-    async def _cleanup_sessions(self):
-        now = time.time()
-        self.sessions = {k: v for k, v in self.sessions.items() if v["expires_at"] > now}
+            if int(g["id"]) in bot_guilds and (int(g.get("permissions", 0)) & 0x8 or int(g.get("permissions", 0)) & 0x20):
+                allowed.append(int(g["id"]))
+        session_token = secrets.token_urlsafe(32)
+        self.sessions[session_token] = {"user_id": int(me["id"]), "guild_ids": allowed, "expires_at": time.time() + 3600}
+        frontend = await self.config.netlify_origin() or "/"
+        return web.HTTPFound(frontend + "#session=" + session_token)
 
     # -------------------- commands --------------------
 
-    @commands.group(name="sentinel", invoke_without_command=True)
-    @commands.guild_only()
+    @commands.group()
     @commands.admin_or_permissions(manage_guild=True)
-    async def sentinel(self, ctx: commands.Context):
-        """Red Sentinel administration."""
-        await ctx.send(
-            f"**Red Sentinel {self.__version__}**\n"
-            f"API: `{await self.config.host()}:{await self.config.port()}`\n"
-            "Use `[p]sentinel token`, `[p]sentinel status`, or the web dashboard."
-        )
+    async def sentinel(self, ctx):
+        """Red Sentinel controls."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send(f"Red Sentinel {self.__version__} API: 0.0.0.0:{await self.config.port()}")
 
     @sentinel.command(name="token")
     @commands.is_owner()
-    async def sentinel_token(self, ctx: commands.Context):
-        """Generate a private API token for the dashboard."""
-        token = secrets.token_urlsafe(40)
+    async def sentinel_token(self, ctx, token: Optional[str] = None):
+        """Set or generate the dashboard API token."""
+        token = token or secrets.token_urlsafe(32)
         await self.config.api_token.set(token)
-        await ctx.author.send(f"Your Red Sentinel API token is:\n`{token}`\n\nDo not share it publicly.")
-        await ctx.send("API token generated and sent to your DMs.", delete_after=8)
+        await ctx.send(f"API token set. Use it in the dashboard: `{token}`")
 
     @sentinel.command(name="status")
-    @commands.admin_or_permissions(manage_guild=True)
-    async def sentinel_status(self, ctx: commands.Context):
-        """Show dashboard status."""
+    async def sentinel_status(self, ctx):
+        """Show API status."""
         await ctx.send(
-            f"**Red Sentinel** `{self.__version__}`\n"
-            f"Web API: `{await self.config.host()}:{await self.config.port()}`\n"
-            f"Public URL: `{await self.config.public_base_url() or 'not configured'}`"
+            f"**Red Sentinel** {self.__version__}\n"
+            f"Web API: {await self.config.host()}:{await self.config.port()}\n"
+            f"Public URL: {await self.config.public_base_url() or 'not configured'}"
         )
-
-
-async def _safe_close(cog: RedSentinel):
-    if cog.session:
-        await cog.session.close()
