@@ -345,12 +345,13 @@ class RedSentinel(commands.Cog):
         return member
 
     async def _require_admin(self, request, guild):
+        """Require Discord Administrator OR Manage Server, matching OAuth access."""
         session = await self._auth(request, guild.id)
         if session["user_id"] == 0:
             return
         member = guild.get_member(int(session["user_id"]))
-        if not member or not member.guild_permissions.administrator:
-            raise web.HTTPForbidden(text="Administrator permission required.")
+        if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):
+            raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
 
     async def api_announce(self, request):
         gid = int(request.match_info["guild_id"])
@@ -521,62 +522,60 @@ class RedSentinel(commands.Cog):
     async def oauth_callback(self, request):
         code = request.query.get("code")
         state = request.query.get("state")
-        if not code or not state or state not in self.oauth_states:
-            raise web.HTTPBadRequest(text="Invalid OAuth state.")
-        self.oauth_states.pop(state, None)
         client_id = await self.config.oauth_client_id()
         client_secret = await self.config.oauth_client_secret()
         redirect_uri = await self.config.oauth_redirect_uri()
-        if not client_id or not client_secret or not redirect_uri or not self.session:
+        if not code or not state or state not in self.oauth_states:
+            raise web.HTTPBadRequest(text="Invalid OAuth callback.")
+        self.oauth_states.pop(state, None)
+        if not client_id or not client_secret or not redirect_uri:
             raise web.HTTPBadRequest(text="Discord OAuth is not configured.")
-        async with self.session.post("https://discord.com/api/oauth2/token", data={
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": redirect_uri,
-        }) as resp:
-            token_data = await resp.json()
-        if resp.status >= 400:
-            raise web.HTTPBadGateway(text="Discord OAuth token exchange failed.")
-        access_token = token_data["access_token"]
-        headers = {"Authorization": f"Bearer {access_token}"}
-        async with self.session.get("https://discord.com/api/users/@me", headers=headers) as resp:
-            me = await resp.json()
-        async with self.session.get("https://discord.com/api/users/@me/guilds", headers=headers) as resp:
-            guilds = await resp.json()
-        bot_guilds = {g.id for g in self.bot.guilds}
-        allowed = []
-        for g in guilds:
-            if int(g["id"]) in bot_guilds and (int(g.get("permissions", 0)) & 0x8 or int(g.get("permissions", 0)) & 0x20):
-                allowed.append(int(g["id"]))
+        try:
+            async with self.session.post(
+                "https://discord.com/api/oauth2/token",
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": redirect_uri,
+                },
+            ) as resp:
+                if resp.status != 200:
+                    raise web.HTTPBadRequest(text="Discord token exchange failed.")
+                token_data = await resp.json()
+            access_token = token_data["access_token"]
+            headers = {"Authorization": f"Bearer {access_token}"}
+            async with self.session.get("https://discord.com/api/users/@me", headers=headers) as resp:
+                if resp.status != 200:
+                    raise web.HTTPBadRequest(text="Discord identity lookup failed.")
+                user = await resp.json()
+            async with self.session.get("https://discord.com/api/users/@me/guilds", headers=headers) as resp:
+                if resp.status != 200:
+                    raise web.HTTPBadRequest(text="Discord guild lookup failed.")
+                user_guilds = await resp.json()
+        except web.HTTPException:
+            raise
+        except Exception as exc:
+            log.exception("OAuth callback failed: %s", exc)
+            raise web.HTTPBadGateway(text="Discord OAuth request failed.")
+        bot_guild_ids = {g.id for g in self.bot.guilds}
+        allowed_guild_ids = []
+        for g in user_guilds:
+            perms = int(g.get("permissions", 0))
+            if int(g["id"]) in bot_guild_ids and (perms & 0x8 or perms & 0x20):
+                allowed_guild_ids.append(int(g["id"]))
         session_token = secrets.token_urlsafe(32)
-        self.sessions[session_token] = {"user_id": int(me["id"]), "guild_ids": allowed, "expires_at": time.time() + 3600}
-        frontend = await self.config.netlify_origin() or "/"
-        return web.HTTPFound(frontend + "#session=" + session_token)
+        self.sessions[session_token] = {
+            "user_id": int(user["id"]),
+            "guild_ids": allowed_guild_ids,
+            "expires_at": time.time() + 3600,
+        }
+        origin = await self.config.netlify_origin() or await self.config.public_base_url()
+        if not origin:
+            origin = "https://red-sentinel.netlify.app"
+        return web.HTTPFound(origin.rstrip("/") + "/#session=" + session_token)
 
-    # -------------------- commands --------------------
 
-    @commands.group()
-    @commands.admin_or_permissions(manage_guild=True)
-    async def sentinel(self, ctx):
-        """Red Sentinel controls."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send(f"Red Sentinel {self.__version__} API: 0.0.0.0:{await self.config.port()}")
-
-    @sentinel.command(name="token")
-    @commands.is_owner()
-    async def sentinel_token(self, ctx, token: Optional[str] = None):
-        """Set or generate the dashboard API token."""
-        token = token or secrets.token_urlsafe(32)
-        await self.config.api_token.set(token)
-        await ctx.send(f"API token set. Use it in the dashboard: `{token}`")
-
-    @sentinel.command(name="status")
-    async def sentinel_status(self, ctx):
-        """Show API status."""
-        await ctx.send(
-            f"**Red Sentinel** {self.__version__}\n"
-            f"Web API: {await self.config.host()}:{await self.config.port()}\n"
-            f"Public URL: {await self.config.public_base_url() or 'not configured'}"
-        )
+async def setup(bot: Red):
+    await bot.add_cog(RedSentinel(bot))
