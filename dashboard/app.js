@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
-const state={api:localStorage.getItem("rs_api")||"",token:localStorage.getItem("rs_token")||"",guild:null,guilds:[],logs:[],config:{}};
+const state={api:localStorage.getItem("rs_api")||location.origin,token:localStorage.getItem("rs_token")||"",guild:null,guilds:[],logs:[],config:{}};
 function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2500)}
 function api(path,opts={}){const headers=Object.assign({"Content-Type":"application/json"},opts.headers||{});if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(state.api.replace(/\/$/,"")+path,{...opts,headers}).then(async r=>{if(!r.ok)throw new Error(await r.text()||r.statusText);return r.status===204?{}:r.json()})}
 function navigate(v){$$(".view").forEach(x=>x.classList.toggle("active",x.id==="view-"+v));$$(".nav").forEach(x=>x.classList.toggle("active",x.dataset.view===v));$("#pageTitle").textContent=v[0].toUpperCase()+v.slice(1);if(v==="logs")loadLogs();if(v==="overview")loadOverview();if(v==="announce")fillChannels();if(v==="routing")renderRouting()}
@@ -7,7 +7,7 @@ window.navigate=navigate;
 async function boot(){
  $("#apiUrl").value=state.api;$("#apiToken").value=state.token;
  if(location.hash.startsWith("#token=")){state.token=decodeURIComponent(location.hash.slice(7));localStorage.setItem("rs_token",state.token);history.replaceState({},document.title,location.pathname)}
- if(!state.api){$("#apiStatus").textContent="Set API URL in Settings";return}
+ if(location.hash.startsWith("#session=")){state.token=decodeURIComponent(location.hash.slice(9));localStorage.setItem("rs_token",state.token);history.replaceState({},document.title,location.pathname)}
  try{await api("/api/health");$("#apiStatus").textContent="API connected";const g=await api("/api/guilds");state.guilds=g;renderGuilds();if(g[0]){state.guild=g[0].id;$("#guildSelect").value=g[0].id;await loadOverview()}}catch(e){$("#apiStatus").textContent="API unavailable";toast("Connect the dashboard to your Sentinel API")}
 }
 function renderGuilds(){const s=$("#guildSelect");s.innerHTML=state.guilds.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join("")}
@@ -32,8 +32,8 @@ async function sendAnnouncement(){try{const color=parseInt($("#embedColor").valu
 async function renderRouting(channels){if(!channels){try{channels=(await api(`/api/guilds/${state.guild}`)).channels}catch{return}}const texts=channels.filter(c=>c.type==="text");$("#routingForm").innerHTML=["twitch","youtube","kick","x","custom"].map(p=>`<label>${p.toUpperCase()} destination<select data-route="${p}"><option value="">Disabled</option>${texts.map(c=>`<option value="${c.id}" ${state.config.routes?.[p]==c.id?"selected":""}># ${escapeHtml(c.name)}</option>`).join("")}</select></label>`).join("")}
 async function saveRouting(){const routes={};$$("[data-route]").forEach(s=>{if(s.value)routes[s.dataset.route]=s.value});try{await api(`/api/guilds/${state.guild}/config`,{method:"PUT",body:JSON.stringify({routes})});toast("Routing saved");loadOverview()}catch(e){toast("Save failed: "+e.message)}}
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-$("#saveConnection").onclick=()=>{state.api=$("#apiUrl").value.trim();state.token=$("#apiToken").value.trim();localStorage.setItem("rs_api",state.api);localStorage.setItem("rs_token",state.token);boot()}
-$("#oauthLogin").onclick=()=>{if(!state.api)return toast("Set API URL first");location.href=state.api.replace(/\/$/,"")+"/oauth/discord/start"}
+$("#saveConnection").onclick=()=>{state.api=$("#apiUrl").value.trim()||location.origin;state.token=$("#apiToken").value.trim();localStorage.setItem("rs_api",state.api);localStorage.setItem("rs_token",state.token);boot()}
+$("#oauthLogin").onclick=()=>{state.api=$("#apiUrl").value.trim()||location.origin;localStorage.setItem("rs_api",state.api);location.href=state.api.replace(/\/$/,"")+"/oauth/discord/start"}
 $("#refreshBtn").onclick=()=>loadOverview();$("#logRefresh").onclick=()=>loadLogs();$("#logType").onchange=loadLogs;$("#logSearch").oninput=renderLogs;$("#sendAnnounce").onclick=sendAnnouncement;$("#saveRouting").onclick=saveRouting;
 $("#guildSelect").onchange=()=>{state.guild=Number($("#guildSelect").value);loadOverview()}
 $$(".nav").forEach(b=>b.onclick=()=>navigate(b.dataset.view));boot();
