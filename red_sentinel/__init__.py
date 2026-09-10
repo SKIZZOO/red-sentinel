@@ -6,6 +6,8 @@ from .oauth_setup import SentinelOAuthSetup
 _original_init = RedSentinel.__init__
 _original_auth = RedSentinel._auth
 _original_oauth_callback = RedSentinel.oauth_callback
+_original_api_guilds = RedSentinel.api_guilds
+_original_api_guild = RedSentinel.api_guild
 
 
 def _persistent_init(self, bot):
@@ -36,9 +38,60 @@ async def _persistent_oauth_callback(self, request):
     return response
 
 
+async def _guild_count(self, guild):
+    """Return a reliable member count even when the gateway cache has no count."""
+    count = getattr(guild, "member_count", None)
+    if count is not None:
+        return count
+    try:
+        fetched = await self.bot.fetch_guild(guild.id, with_counts=True)
+        count = getattr(fetched, "approximate_member_count", None)
+        if count is not None:
+            return count
+    except Exception:
+        pass
+    cached = len(getattr(guild, "members", ()) or ())
+    return cached if cached else None
+
+
+async def _api_guilds_with_count(self, request):
+    session = await self._auth(request)
+    allowed = set(session["guild_ids"])
+    result = []
+    for guild in self.bot.guilds:
+        if allowed and guild.id not in allowed:
+            continue
+        result.append({
+            "id": guild.id,
+            "name": guild.name,
+            "icon": str(guild.icon.url) if guild.icon else None,
+            "member_count": await _guild_count(self, guild),
+        })
+    return __import__("aiohttp").web.json_response(result)
+
+
+async def _api_guild_with_count(self, request):
+    gid = int(request.match_info["guild_id"])
+    await self._auth(request, gid)
+    guild = self.bot.get_guild(gid)
+    if not guild:
+        raise __import__("aiohttp").web.HTTPNotFound(text="Guild not found.")
+    count = await _guild_count(self, guild)
+    return __import__("aiohttp").web.json_response({
+        "id": guild.id,
+        "name": guild.name,
+        "icon": str(guild.icon.url) if guild.icon else None,
+        "member_count": count,
+        "channels": [{"id": c.id, "name": c.name, "type": str(c.type)} for c in guild.channels],
+        "roles": [{"id": r.id, "name": r.name, "position": r.position} for r in guild.roles if not r.is_default()],
+    })
+
+
 RedSentinel.__init__ = _persistent_init
 RedSentinel._auth = _persistent_auth
 RedSentinel.oauth_callback = _persistent_oauth_callback
+RedSentinel.api_guilds = _api_guilds_with_count
+RedSentinel.api_guild = _api_guild_with_count
 
 
 async def setup(bot):
