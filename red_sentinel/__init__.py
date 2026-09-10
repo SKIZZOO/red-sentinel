@@ -1,5 +1,6 @@
 from .red_sentinel import RedSentinel
 from .oauth_setup import SentinelOAuthSetup
+from .enhancements import SentinelEnhancements, patch_red_sentinel
 
 # Dashboard hardening: persist OAuth sessions and resolve server access from
 # the actual bot guild list plus the user's Discord OAuth guild membership.
@@ -73,11 +74,6 @@ async def _auth_fixed(self, request, guild_id=None):
         guild = self.bot.get_guild(gid)
         if guild is None:
             raise web.HTTPNotFound(text="Guild not found.")
-
-        # The OAuth /users/@me/guilds response is authoritative for the user's
-        # Discord server membership at login. Use it first. This also avoids
-        # failures when the bot cannot fetch a member because of Discord's
-        # privileged member intent/cache limitations.
         if gid not in normalized["guild_ids"]:
             if not await _member_can_manage(self, guild, normalized["user_id"]):
                 raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
@@ -102,8 +98,6 @@ async def _persist_sessions(self):
 
 
 async def _persistent_oauth_callback(self, request):
-    # The original callback finishes with HTTP 302, which is raised as an
-    # aiohttp HTTPException. Persist the session even when that redirect is raised.
     try:
         return await _original_oauth_callback(self, request)
     except Exception:
@@ -139,22 +133,17 @@ async def _api_guilds(self, request):
 
     result = []
     for guild in self.bot.guilds:
-        # Prefer the OAuth guild list because it is returned directly by Discord
-        # for the logged-in user. If the session list is unavailable, fall back
-        # to checking the live member permissions.
         if user_id and oauth_guild_ids:
             if int(guild.id) not in oauth_guild_ids:
                 continue
         elif user_id and not await _member_can_manage(self, guild, user_id):
             continue
-
         result.append({
             "id": int(guild.id),
             "name": guild.name,
             "icon": str(guild.icon.url) if guild.icon else None,
             "member_count": await _guild_count(self, guild),
         })
-
     result.sort(key=lambda x: x["name"].lower())
     return web.json_response(result)
 
@@ -174,31 +163,6 @@ async def _api_guild(self, request):
         "channels": [{"id": int(c.id), "name": c.name, "type": str(c.type)} for c in guild.channels],
         "roles": [{"id": int(r.id), "name": r.name, "position": r.position} for r in guild.roles if not r.is_default()],
     })
-
-
-async def _api_get_config(self, request):
-    from aiohttp import web
-    gid = int(request.match_info["guild_id"])
-    guild = self.bot.get_guild(gid)
-    if guild is None:
-        raise web.HTTPNotFound(text="Guild not found.")
-    await self._auth(request, gid)
-    return web.json_response({"providers": await self.config.providers(), "routes": await self.config.routes()})
-
-
-async def _api_put_config(self, request):
-    from aiohttp import web
-    gid = int(request.match_info["guild_id"])
-    guild = self.bot.get_guild(gid)
-    if guild is None:
-        raise web.HTTPNotFound(text="Guild not found.")
-    await self._auth(request, gid)
-    data = await self._json(request)
-    if "providers" in data:
-        await self.config.providers.set(data["providers"])
-    if "routes" in data:
-        await self.config.routes.set(data["routes"])
-    return web.json_response({"ok": True})
 
 
 async def _start_web_fixed(self):
@@ -236,11 +200,11 @@ RedSentinel._auth = _auth_fixed
 RedSentinel.oauth_callback = _persistent_oauth_callback
 RedSentinel.api_guilds = _api_guilds
 RedSentinel.api_guild = _api_guild
-RedSentinel.api_get_config = _api_get_config
-RedSentinel.api_put_config = _api_put_config
 RedSentinel._start_web = _start_web_fixed
+patch_red_sentinel(RedSentinel)
 
 
 async def setup(bot):
     await bot.add_cog(RedSentinel(bot))
     await bot.add_cog(SentinelOAuthSetup(bot))
+    await bot.add_cog(SentinelEnhancements(bot))
