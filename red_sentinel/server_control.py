@@ -13,7 +13,7 @@ async def _guild(self, request):
 
 
 def _json_channel(c):
-    return {"id": int(c.id), "name": c.name, "type": str(c.type), "position": getattr(c, "position", 0), "category_id": getattr(getattr(c, "category", None), "id", None), "nsfw": bool(getattr(c, "nsfw", False)), "slowmode": int(getattr(c, "slowmode_delay", 0) or 0)}
+    return {"id": str(c.id), "name": c.name, "type": str(c.type), "position": getattr(c, "position", 0), "category_id": str(getattr(getattr(c, "category", None), "id", "")) if getattr(c, "category", None) else None, "nsfw": bool(getattr(c, "nsfw", False)), "slowmode": int(getattr(c, "slowmode_delay", 0) or 0)}
 
 
 async def api_channels(self, request):
@@ -66,7 +66,7 @@ async def api_channel_action(self, request):
 async def api_roles(self, request):
     guild = await _guild(self, request)
     await self._require_admin(request, guild)
-    return web.json_response({"roles": [{"id": int(r.id), "name": r.name, "position": r.position, "color": r.color.value, "mentionable": r.mentionable, "hoist": r.hoist, "managed": r.managed} for r in sorted(guild.roles, key=lambda x: x.position, reverse=True)]})
+    return web.json_response({"roles": [{"id": str(r.id), "name": r.name, "position": r.position, "color": r.color.value, "mentionable": r.mentionable, "hoist": r.hoist, "managed": r.managed} for r in sorted(guild.roles, key=lambda x: x.position, reverse=True)]})
 
 
 async def api_role_action(self, request):
@@ -89,7 +89,7 @@ async def api_role_action(self, request):
             elif action == "delete": await role.delete(reason=reason)
             else: raise web.HTTPBadRequest(text="Unknown role action.")
         await self._log_event(guild, f"admin.role.{action}", target=role, payload={"name": getattr(role,"name",None),"reason":reason})
-        return web.json_response({"ok":True,"role":{"id":int(role.id),"name":role.name,"position":role.position} if role else None})
+        return web.json_response({"ok": True, "role": {"id": str(role.id), "name": role.name, "position": role.position} if role else None})
     except web.HTTPException: raise
     except (ValueError, TypeError) as exc: raise web.HTTPBadRequest(text=f"Invalid role data: {exc}")
     except discord.Forbidden as exc: raise web.HTTPForbidden(text=f"Discord denied action: {exc}")
@@ -97,26 +97,26 @@ async def api_role_action(self, request):
 
 
 async def api_audit(self, request):
-    guild=await _guild(self,request);await self._require_admin(request,guild);limit=max(1,min(int(request.query.get("limit",100)),200));items=[]
+    guild=await _guild(self,request); await self._require_admin(request,guild); limit=max(1,min(int(request.query.get("limit",100)),200)); items=[]
     try:
         async for entry in guild.audit_logs(limit=limit):
-            items.append({"id":int(entry.id),"action":str(entry.action),"user_id":int(entry.user.id) if entry.user else None,"user":str(entry.user) if entry.user else None,"target_id":getattr(entry.target,"id",None),"target":str(entry.target) if entry.target else None,"reason":entry.reason,"created_at":entry.created_at.isoformat()})
+            items.append({"id":str(entry.id),"action":str(entry.action),"user_id":str(entry.user.id) if entry.user else None,"user":str(entry.user) if entry.user else None,"target_id":str(getattr(entry.target,"id","")) if getattr(entry.target,"id",None) else None,"target":str(entry.target) if entry.target else None,"reason":entry.reason,"created_at":entry.created_at.isoformat()})
     except discord.Forbidden as exc: raise web.HTTPForbidden(text=f"Audit log access denied: {exc}")
-    return web.json_response({"entries":items})
+    return web.json_response({"entries":entries})
 
 
 async def api_guild_control(self, request):
-    guild=await _guild(self,request);await self._require_admin(request,guild);action=request.match_info["action"];data=await self._json(request);reason=str(data.get("reason") or "Red Sentinel dashboard action")[:512]
+    guild=await _guild(self,request); await self._require_admin(request,guild); action=request.match_info["action"]; data=await self._json(request); reason=str(data.get("reason") or "Red Sentinel dashboard action")[:512]
     try:
         if action == "rename": await guild.edit(name=str(data.get("name") or guild.name)[:100],reason=reason)
         elif action == "description": await guild.edit(description=str(data.get("description") or "")[:120],reason=reason)
         elif action == "verification": await guild.edit(verification_level=getattr(discord.VerificationLevel,str(data.get("level") or "none")),reason=reason)
         else: raise web.HTTPBadRequest(text="Unknown server control action.")
         await self._log_event(guild,f"admin.guild.{action}",target=guild,payload={"reason":reason,"action":action})
-        return web.json_response({"ok":True,"id":int(guild.id),"name":guild.name,"description":getattr(guild,"description",None)})
+        return web.json_response({"ok":True,"id":str(guild.id),"name":guild.name,"description":getattr(guild,"description",None)})
     except web.HTTPException: raise
-    except discord.Forbidden as exc: raise web.HTTPForbidden(text=f"Discord denied action: {exc}")
-    except discord.HTTPException as exc: raise web.HTTPBadRequest(text=f"Discord rejected action: {exc}")
+    except discord.Forbidden as exc: raise web.HTTPForbidden(text=f"Discord denied the action: {exc}")
+    except discord.HTTPException as exc: raise web.HTTPBadRequest(text=f"Discord rejected the action: {exc}")
 
 
 def patch_server_control(RedSentinel):
