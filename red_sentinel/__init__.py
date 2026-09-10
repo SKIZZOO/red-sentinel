@@ -18,8 +18,13 @@ async def _load_session(self,token):
         s=stored.get(token)
         if s and s.get("expires_at",0)>time.time():self.sessions[token]=s;return s
     return None
+async def _is_dashboard_owner(self,user_id):
+    try:
+        return int(user_id) in {int(x) for x in getattr(self.bot,"owner_ids",set())}
+    except Exception:return False
 async def _member_can_manage(self,guild,user_id):
     if not user_id:return False
+    if await _is_dashboard_owner(self,user_id):return True
     member=guild.get_member(int(user_id))
     if member is None:
         try:member=await guild.fetch_member(int(user_id))
@@ -52,24 +57,23 @@ async def _persist_sessions(self):
 async def _persistent_oauth_callback(self,request):
     try:return await _original_oauth_callback(self,request)
     except Exception:await _persist_sessions(self);raise
-async def _guild_count(self,guild):
+async def _guild_count(guild):
     c=getattr(guild,"member_count",None)
     if c is not None:return c
-    try:
-        f=await self.bot.fetch_guild(guild.id,with_counts=True);return getattr(f,"approximate_member_count",None)
-    except Exception:return len(getattr(guild,"members",[]) or []) or None
+    return len(getattr(guild,"members",[]) or []) or None
 async def _api_guilds(self,request):
     from aiohttp import web
     s=await self._auth(request);uid=int(s.get("user_id",0));result=[]
+    owner=await _is_dashboard_owner(self,uid)
     for g in self.bot.guilds:
-        if uid and not await _member_can_manage(self,g,uid):continue
-        result.append({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(self,g)})
+        if not owner and not await _member_can_manage(self,g,uid):continue
+        result.append({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(g)})
     result.sort(key=lambda x:x["name"].lower());return web.json_response(result)
 async def _api_guild(self,request):
     from aiohttp import web
     gid=int(request.match_info["guild_id"]);await self._auth(request,gid);g=self.bot.get_guild(gid)
     if g is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
-    return web.json_response({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if getattr(g,"icon",None) else None,"member_count":await _guild_count(self,g),"channels":[{"id":int(c.id),"name":c.name,"type":str(c.type)} for c in getattr(g,"channels",[])],"roles":[{"id":int(r.id),"name":r.name,"position":r.position} for r in getattr(g,"roles",[]) if not r.is_default()]})
+    return web.json_response({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if getattr(g,"icon",None) else None,"member_count":await _guild_count(g),"channels":[{"id":int(c.id),"name":c.name,"type":str(c.type)} for c in getattr(g,"channels",[])],"roles":[{"id":int(r.id),"name":r.name,"position":r.position} for r in getattr(g,"roles",[]) if not r.is_default()]})
 async def _start_web_fixed(self):
     from aiohttp import web
     app=web.Application(client_max_size=8*1024*1024)
