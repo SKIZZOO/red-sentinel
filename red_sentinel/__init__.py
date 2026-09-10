@@ -2,7 +2,7 @@ from .red_sentinel import RedSentinel
 from .oauth_setup import SentinelOAuthSetup
 
 # Dashboard hardening: persist OAuth sessions and resolve server access from
-# the actual Discord guild/member state instead of trusting a stale OAuth list.
+# the actual bot guild list plus the user's Discord OAuth guild membership.
 _original_init = RedSentinel.__init__
 _original_oauth_callback = RedSentinel.oauth_callback
 
@@ -73,10 +73,14 @@ async def _auth_fixed(self, request, guild_id=None):
         guild = self.bot.get_guild(gid)
         if guild is None:
             raise web.HTTPNotFound(text="Guild not found.")
-        # Never trust the cached OAuth guild list for authorization. Check the
-        # user's actual Discord permissions in the server where the bot is now.
-        if not await _member_can_manage(self, guild, normalized["user_id"]):
-            raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
+
+        # The OAuth /users/@me/guilds response is authoritative for the user's
+        # Discord server membership at login. Use it first. This also avoids
+        # failures when the bot cannot fetch a member because of Discord's
+        # privileged member intent/cache limitations.
+        if gid not in normalized["guild_ids"]:
+            if not await _member_can_manage(self, guild, normalized["user_id"]):
+                raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
 
     return normalized
 
@@ -127,13 +131,23 @@ async def _api_guilds(self, request):
 
     session = await self._auth(request)
     user_id = int(session.get("user_id", 0))
-    result = []
+    oauth_guild_ids = set()
+    try:
+        oauth_guild_ids = {int(x) for x in session.get("guild_ids", [])}
+    except Exception:
+        oauth_guild_ids = set()
 
-    # Only show servers where this bot is actually installed. For OAuth users,
-    # verify Administrator / Manage Server against the live Discord member.
+    result = []
     for guild in self.bot.guilds:
-        if user_id and not await _member_can_manage(self, guild, user_id):
+        # Prefer the OAuth guild list because it is returned directly by Discord
+        # for the logged-in user. If the session list is unavailable, fall back
+        # to checking the live member permissions.
+        if user_id and oauth_guild_ids:
+            if int(guild.id) not in oauth_guild_ids:
+                continue
+        elif user_id and not await _member_can_manage(self, guild, user_id):
             continue
+
         result.append({
             "id": int(guild.id),
             "name": guild.name,
