@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Red Sentinel — Command Center</title>
   <meta name="description" content="Red Sentinel Discord command center" />
-  <link rel="stylesheet" href="./styles.css?v=20260911-1" />
+  <link rel="stylesheet" href="./styles.css?v=20260911-2" />
 </head>
 <body>
   <div class="noise"></div>
@@ -21,21 +21,11 @@
         <button class="nav" data-view="routing">⌘ <span>Routing</span></button>
         <button class="nav" data-view="settings">⚙ <span>Settings</span></button>
       </nav>
-      <div class="sidebar-foot">
-        <div class="status-dot"></div><span>Sentinel online</span>
-        <small id="apiStatus">API checking…</small>
-      </div>
+      <div class="sidebar-foot"><div class="status-dot"></div><span>Sentinel online</span><small id="apiStatus">API checking…</small></div>
     </aside>
     <main>
-      <header class="topbar">
-        <div><div class="eyebrow">DISCORD OPERATIONS</div><h1 id="pageTitle">Overview</h1></div>
-        <div class="top-actions"><select id="guildSelect"></select><button class="icon-btn" id="refreshBtn">↻</button><button class="avatar" id="userBadge">?</button></div>
-      </header>
-      <section id="view-overview" class="view active">
-        <div class="hero"><div><div class="eyebrow">COMMAND STATUS</div><h2>Everything important.<br><em>One surface.</em></h2><p>Monitor your server, react to events and push polished announcements without leaving the control room.</p></div><div class="orb"><div class="orb-core"></div><div class="ring r1"></div><div class="ring r2"></div></div></div>
-        <div class="stats"><div class="stat"><span>EVENTS TODAY</span><strong id="statEvents">—</strong><i>↗ live</i></div><div class="stat"><span>MEMBERS</span><strong id="statMembers">—</strong><i>server</i></div><div class="stat"><span>SOCIAL ROUTES</span><strong id="statRoutes">—</strong><i>armed</i></div><div class="stat"><span>BOT STATUS</span><strong class="good">ONLINE</strong><i>healthy</i></div></div>
-        <div class="grid-2"><div class="panel"><div class="panel-head"><div><span class="eyebrow">LIVE STREAM</span><h3>Recent activity</h3></div><button class="ghost" onclick="navigate('logs')">View all →</button></div><div id="activity" class="activity"></div></div><div class="panel"><div class="panel-head"><div><span class="eyebrow">AUTOMATIONS</span><h3>Signal routes</h3></div></div><div id="routeCards" class="route-cards"></div></div></div>
-      </section>
+      <header class="topbar"><div><div class="eyebrow">DISCORD OPERATIONS</div><h1 id="pageTitle">Overview</h1></div><div class="top-actions"><select id="guildSelect"></select><button class="icon-btn" id="refreshBtn">↻</button><button class="avatar" id="userBadge">?</button></div></header>
+      <section id="view-overview" class="view active"><div class="hero"><div><div class="eyebrow">COMMAND STATUS</div><h2>Everything important.<br><em>One surface.</em></h2><p>Monitor your server, react to events and push polished announcements without leaving the control room.</p></div><div class="orb"><div class="orb-core"></div><div class="ring r1"></div><div class="ring r2"></div></div></div><div class="stats"><div class="stat"><span>EVENTS TODAY</span><strong id="statEvents">—</strong><i>↗ live</i></div><div class="stat"><span>MEMBERS</span><strong id="statMembers">—</strong><i>server</i></div><div class="stat"><span>SOCIAL ROUTES</span><strong id="statRoutes">—</strong><i>armed</i></div><div class="stat"><span>BOT STATUS</span><strong class="good">ONLINE</strong><i>healthy</i></div></div><div class="grid-2"><div class="panel"><div class="panel-head"><div><span class="eyebrow">LIVE STREAM</span><h3>Recent activity</h3></div><button class="ghost" onclick="navigate('logs')">View all →</button></div><div id="activity" class="activity"></div></div><div class="panel"><div class="panel-head"><div><span class="eyebrow">AUTOMATIONS</span><h3>Signal routes</h3></div></div><div id="routeCards" class="route-cards"></div></div></div></section>
       <section id="view-logs" class="view"><div class="toolbar"><input id="logSearch" placeholder="Search logs…" /><select id="logType"><option value="">All events</option><option>message.create</option><option>message.edit</option><option>message.delete</option><option>member.join</option><option>member.leave</option><option>moderation.ban</option><option>moderation.kick</option></select><button class="primary" id="logRefresh">Refresh logs</button></div><div class="panel table-wrap"><table><thead><tr><th>TIME</th><th>EVENT</th><th>ACTOR</th><th>CHANNEL</th><th>DETAIL</th></tr></thead><tbody id="logTable"></tbody></table></div></section>
       <section id="view-moderation" class="view"><div class="grid-2"><div class="panel form-panel"><span class="eyebrow">MODERATION</span><h3>Take action</h3><label>User ID <input id="modUser" placeholder="Discord user ID" /></label><label>Reason <input id="modReason" placeholder="Reason for action" /></label><div class="button-row"><button class="danger" onclick="moderate('ban')">Ban</button><button class="warning" onclick="moderate('kick')">Kick</button><button class="ghost" onclick="moderate('timeout')">Timeout 1h</button></div><p class="hint">Actions are performed by the Red bot and are still constrained by Discord's role hierarchy and permissions.</p></div><div class="panel"><span class="eyebrow">SAFETY</span><h3>Operator guardrails</h3><div class="checks"><div>✓ Server administrator verification</div><div>✓ Bot permission enforcement</div><div>✓ Every web action logged</div><div>✓ Secrets stay on the bot host</div></div></div></div></section>
       <section id="view-announce" class="view"><div class="panel form-panel"><span class="eyebrow">PUBLISH</span><h3>Build an announcement</h3><label>Channel <select id="announceChannel"></select></label><label>Message <textarea id="announceContent" rows="5" placeholder="Your announcement…"></textarea></label><div class="grid-2 compact"><label>Embed title <input id="embedTitle" placeholder="Big news" /></label><label>Embed color <input id="embedColor" value="7C5CFC" /></label></div><label>Embed description <textarea id="embedDescription" rows="4" placeholder="Optional rich embed copy…"></textarea></label><label>Image URL <input id="embedImage" placeholder="https://…" /></label><div class="button-row"><button class="primary" id="sendAnnounce">Publish announcement</button><button class="ghost" id="previewAnnounce">Preview</button></div></div></section>
@@ -45,6 +35,6 @@
     </main>
   </div>
   <div id="toast"></div>
-  <script src="./app.js?v=20260911-1"></script>
+  <script src="./app.js?v=20260911-2"></script>
 </body>
 </html>
