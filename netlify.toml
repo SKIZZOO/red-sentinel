@@ -5,13 +5,13 @@
 # The Red Sentinel API is exposed through TCP port 27015.
 [[redirects]]
   from = "/api/*"
-  to = "http://187.13.27.138:27015/api/:splat"
+  to = "http://77.173.239.204:27015/api/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/oauth/*"
-  to = "http://187.13.27.138:27015/oauth/:splat"
+  to = "http://77.173.239.204:27015/oauth/:splat"
   status = 200
   force = true
 
