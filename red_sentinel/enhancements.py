@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import hashlib
+import asyncio
 import hmac
-import json
 import time
 from typing import Any
 
 import discord
 from aiohttp import web
-from redbot.core import Config, commands
+from redbot.core import commands
 
 
-def _provider_item(data: dict[str, Any]) -> tuple[str, str, str | None, str | None, str | None, dict[str, Any]]:
+def _provider_item(data: dict[str, Any]):
     provider = str(data.get("provider") or "custom").lower().strip()
     external_id = str(data.get("external_id") or data.get("id") or f"{provider}:{int(time.time() * 1000)}")
     item = data.get("item") if isinstance(data.get("item"), dict) else data
@@ -32,28 +31,18 @@ def _provider_item(data: dict[str, Any]) -> tuple[str, str, str | None, str | No
     return provider, external_id, normalized["author"], normalized["title"], normalized["url"], normalized
 
 
-async def _guild_config(sentinel, guild):
-    return sentinel.config.guild(guild)
-
-
 async def _ensure_guild_config(sentinel):
-    sentinel.config.register_guild(
-        providers={},
-        routes={},
-        social_webhook_secret="",
-    )
+    sentinel.config.register_guild(providers={}, routes={}, social_webhook_secret="")
     global_providers = await sentinel.config.providers()
     global_routes = await sentinel.config.routes()
     for guild in sentinel.bot.guilds:
-        cfg = _guild_config(sentinel, guild)
+        cfg = sentinel.config.guild(guild)
         current_routes = await cfg.routes()
         current_providers = await cfg.providers()
-        changed = False
         if not current_providers and global_providers:
             await cfg.providers.set(global_providers)
-            changed = True
         if not current_routes and global_routes:
-            migrated: dict[str, str] = {}
+            migrated = {}
             for provider, value in (global_routes or {}).items():
                 entries = value if isinstance(value, list) else [value]
                 for entry in entries:
@@ -64,13 +53,10 @@ async def _ensure_guild_config(sentinel):
                     else:
                         channel_id = entry
                     if channel_id:
-                        migrated[str(provider)] = str(channel_id)
+                        migrated[str(provider).lower()] = str(channel_id)
                         break
             if migrated:
                 await cfg.routes.set(migrated)
-                changed = True
-        if changed:
-            await cfg.providers()
 
 
 async def api_get_config(self, request):
@@ -79,8 +65,8 @@ async def api_get_config(self, request):
     if guild is None:
         raise web.HTTPNotFound(text="Guild not found.")
     await self._auth(request, gid)
-    cfg = self.config.guild(guild)
     self.config.register_guild(providers={}, routes={}, social_webhook_secret="")
+    cfg = self.config.guild(guild)
     return web.json_response({"providers": await cfg.providers(), "routes": await cfg.routes()})
 
 
@@ -96,10 +82,7 @@ async def api_put_config(self, request):
     if "providers" in data:
         await cfg.providers.set(data["providers"] if isinstance(data["providers"], dict) else {})
     if "routes" in data:
-        clean = {}
-        for provider, channel_id in (data["routes"] or {}).items():
-            if channel_id:
-                clean[str(provider).lower()] = str(channel_id)
+        clean = {str(k).lower(): str(v) for k, v in (data.get("routes") or {}).items() if v}
         await cfg.routes.set(clean)
     if "social_webhook_secret" in data:
         await cfg.social_webhook_secret.set(str(data["social_webhook_secret"] or ""))
@@ -107,27 +90,17 @@ async def api_put_config(self, request):
 
 
 async def api_social_webhook(self, request):
+    data = await self._json(request)
+    guild_id = data.get("guild_id")
     token = request.headers.get("X-Sentinel-Webhook", "")
     static_token = await self.config.api_token()
-    if not static_token or not hmac.compare_digest(token, static_token):
-        raise web.HTTPUnauthorized(text="Invalid webhook token.")
-    data = await self._json(request)
+    static_ok = bool(static_token and token and hmac.compare_digest(token, static_token))
+    if not static_ok:
+        # Dashboard test signals use the normal OAuth bearer session. External
+        # providers should use the static X-Sentinel-Webhook token instead.
+        await self._auth(request, int(guild_id) if guild_id else None)
+
     provider, external_id, author, title, url, normalized = _provider_item(data)
-
-    # Optional Twitch EventSub signature verification. If any guild has a
-    # configured Twitch webhook secret, require a valid signature for Twitch.
-    if provider == "twitch":
-        signature = request.headers.get("Twitch-Eventsub-Message-Signature")
-        message_id = request.headers.get("Twitch-Eventsub-Message-Id")
-        timestamp = request.headers.get("Twitch-Eventsub-Message-Timestamp")
-        if signature and message_id and timestamp:
-            raw = await request.clone().read() if False else None
-            # aiohttp's JSON body has already been consumed; reconstruct the
-            # canonical payload from the parsed JSON for providers that send the
-            # normalized endpoint format. Official EventSub deployments should
-            # set a per-guild secret and can still use the generic token.
-            normalized["twitch_signature_present"] = True
-
     item = {
         "provider": provider,
         "external_id": external_id,
@@ -137,9 +110,8 @@ async def api_social_webhook(self, request):
         "payload": normalized,
         "created_at": int(time.time()),
     }
-    await __import__("asyncio").to_thread(self._insert_social_item, item)
+    await asyncio.to_thread(self._insert_social_item, item)
 
-    guild_id = data.get("guild_id") or normalized.get("payload", {}).get("guild_id")
     targets = []
     self.config.register_guild(providers={}, routes={}, social_webhook_secret="")
     for guild in self.bot.guilds:
@@ -151,19 +123,25 @@ async def api_social_webhook(self, request):
         if not channel_id:
             continue
         channel = guild.get_channel(int(channel_id))
-        if not isinstance(channel, discord.TextChannel):
-            continue
-        targets.append((guild, channel))
+        if isinstance(channel, discord.TextChannel):
+            targets.append((guild, channel))
 
-    embed = discord.Embed(
-        title=title or f"{provider.upper()} update",
-        description=normalized.get("description") or (f"{author}" if author else "New social signal"),
-        url=url or discord.Embed.Empty,
-        timestamp=discord.utils.utcnow(),
-    )
+    kwargs = {
+        "title": title or f"{provider.upper()} update",
+        "description": normalized.get("description") or (author if author else "New social signal"),
+        "timestamp": discord.utils.utcnow(),
+    }
+    if url:
+        kwargs["url"] = url
+    embed = discord.Embed(**kwargs)
     if normalized.get("thumbnail"):
-        embed.set_thumbnail(url=str(normalized["thumbnail"]))
+        try:
+            embed.set_thumbnail(url=str(normalized["thumbnail"]))
+        except Exception:
+            pass
     embed.set_footer(text=f"Red Sentinel • {provider.upper()}")
+
+    delivered = 0
     for guild, channel in targets:
         try:
             await channel.send(embed=embed)
@@ -173,9 +151,10 @@ async def api_social_webhook(self, request):
                 "author": author,
                 "url": url,
             })
+            delivered += 1
         except discord.HTTPException:
             continue
-    return web.json_response({"ok": True, "provider": provider, "delivered": len(targets)})
+    return web.json_response({"ok": True, "provider": provider, "delivered": delivered})
 
 
 class SentinelEnhancements(commands.Cog):
