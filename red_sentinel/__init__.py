@@ -23,6 +23,19 @@ async def _persistent_auth(self, request, guild_id=None):
         session = stored.get(token) if isinstance(stored, dict) else None
         if session and session.get("expires_at", 0) > __import__("time").time():
             self.sessions[token] = session
+
+    # Discord OAuth returns guild IDs as strings, while discord.py uses ints.
+    # Normalize them before the original authorization check so guild endpoints
+    # do not incorrectly return 403.
+    session = self.sessions.get(token)
+    if session:
+        session = dict(session)
+        try:
+            session["guild_ids"] = [int(x) for x in session.get("guild_ids", [])]
+        except (TypeError, ValueError):
+            session["guild_ids"] = []
+        self.sessions[token] = session
+
     return await _original_auth(self, request, guild_id)
 
 
@@ -33,6 +46,11 @@ async def _persistent_oauth_callback(self, request):
         stored = {}
     now = __import__("time").time()
     stored = {k: v for k, v in stored.items() if v.get("expires_at", 0) > now}
+    for session in self.sessions.values():
+        try:
+            session["guild_ids"] = [int(x) for x in session.get("guild_ids", [])]
+        except (TypeError, ValueError):
+            session["guild_ids"] = []
     stored.update(self.sessions)
     await self.config.web_sessions.set(stored)
     return response
