@@ -21,7 +21,10 @@ async def api_announce(self,request):
     if ed:
         try:color=int(str(ed.get("color",0x7C5CFC)).replace("#",""),16)
         except Exception:color=0x7C5CFC
-        embed=discord.Embed(title=str(ed.get("title") or "")[:256] or discord.Embed.Empty,description=str(ed.get("description") or "")[:4096] or discord.Embed.Empty,color=color)
+        kw={"color":color}
+        if ed.get("title"):kw["title"]=str(ed["title"])[:256]
+        if ed.get("description"):kw["description"]=str(ed["description"])[:4096]
+        embed=discord.Embed(**kw)
         if ed.get("image"):embed.set_image(url=str(ed["image"]))
     try:m=await channel.send(content=content or None,embed=embed)
     except discord.Forbidden as exc:raise web.HTTPForbidden(text=f"Discord denied sending: {exc}")
