@@ -2,9 +2,11 @@ from .red_sentinel import RedSentinel
 from .oauth_setup import SentinelOAuthSetup
 
 # Dashboard hardening: persist OAuth sessions, normalize Discord snowflake IDs,
-# and explicitly register every dashboard route on startup.
+# authorize users by their actual Discord permissions, and keep all dashboard routes active.
 _original_init = RedSentinel.__init__
 _original_oauth_callback = RedSentinel.oauth_callback
+_original_api_get_config = RedSentinel.api_get_config
+_original_api_put_config = RedSentinel.api_put_config
 
 
 def _persistent_init(self, bot):
@@ -13,6 +15,10 @@ def _persistent_init(self, bot):
 
 
 async def _auth_fixed(self, request, guild_id=None):
+    import hmac
+    import time
+    from aiohttp import web
+
     auth = request.headers.get("Authorization", "")
     token = auth.removeprefix("Bearer ").strip()
     static_token = await self.config.api_token()
@@ -21,27 +27,45 @@ async def _auth_fixed(self, request, guild_id=None):
         stored = await self.config.web_sessions()
         if isinstance(stored, dict):
             session = stored.get(token)
-            if session and session.get("expires_at", 0) > __import__("time").time():
+            if session and session.get("expires_at", 0) > time.time():
                 self.sessions[token] = session
 
     session = self.sessions.get(token)
-    if session and session.get("expires_at", 0) > __import__("time").time():
+    if session and session.get("expires_at", 0) > time.time():
         normalized = dict(session)
         try:
             normalized["guild_ids"] = [int(x) for x in session.get("guild_ids", [])]
         except (TypeError, ValueError):
             normalized["guild_ids"] = []
         self.sessions[token] = normalized
-        if guild_id is not None and int(guild_id) not in normalized["guild_ids"]:
-            raise __import__("aiohttp").web.HTTPForbidden(text="You do not have access to this server.")
+
+        if guild_id is not None:
+            gid = int(guild_id)
+            if gid not in normalized["guild_ids"]:
+                # OAuth guild lists can be stale or incomplete. The bot itself is
+                # the source of truth for the server, and Discord permissions are
+                # checked before granting dashboard access.
+                guild = self.bot.get_guild(gid)
+                if guild is None:
+                    raise web.HTTPNotFound(text="Guild not found.")
+                member = guild.get_member(int(normalized.get("user_id", 0)))
+                if member is None:
+                    try:
+                        member = await guild.fetch_member(int(normalized.get("user_id", 0)))
+                    except Exception:
+                        member = None
+                if not member or not (
+                    member.guild_permissions.administrator
+                    or member.guild_permissions.manage_guild
+                ):
+                    raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
+
         return normalized
 
-    if static_token and token:
-        import hmac
-        if hmac.compare_digest(token, static_token):
-            return {"user_id": 0, "guild_ids": [int(guild_id)] if guild_id is not None else []}
+    if static_token and token and hmac.compare_digest(token, static_token):
+        return {"user_id": 0, "guild_ids": [int(guild_id)] if guild_id is not None else []}
 
-    raise __import__("aiohttp").web.HTTPUnauthorized(text="Authentication required.")
+    raise web.HTTPUnauthorized(text="Authentication required.")
 
 
 async def _persistent_oauth_callback(self, request):
@@ -108,21 +132,57 @@ async def _api_guild(self, request):
     })
 
 
+async def _api_get_config(self, request):
+    gid = int(request.match_info["guild_id"])
+    guild = self.bot.get_guild(gid)
+    if guild is None:
+        raise __import__("aiohttp").web.HTTPNotFound(text="Guild not found.")
+    await self._auth(request, gid)
+    return __import__("aiohttp").web.json_response({
+        "providers": await self.config.providers(),
+        "routes": await self.config.routes(),
+    })
+
+
+async def _api_put_config(self, request):
+    gid = int(request.match_info["guild_id"])
+    guild = self.bot.get_guild(gid)
+    if guild is None:
+        raise __import__("aiohttp").web.HTTPNotFound(text="Guild not found.")
+    await self._auth(request, gid)
+    session = await self._auth(request, gid)
+    if session.get("user_id", 0):
+        member = guild.get_member(int(session["user_id"]))
+        if member is None:
+            try:
+                member = await guild.fetch_member(int(session["user_id"]))
+            except Exception:
+                member = None
+        if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):
+            raise __import__("aiohttp").web.HTTPForbidden(text="Administrator or Manage Server permission required.")
+    data = await self._json(request)
+    if "providers" in data:
+        await self.config.providers.set(data["providers"])
+    if "routes" in data:
+        await self.config.routes.set(data["routes"])
+    return __import__("aiohttp").web.json_response({"ok": True})
+
+
 async def _start_web_fixed(self):
     from aiohttp import web
     app = web.Application(client_max_size=8 * 1024 * 1024)
     app.add_routes([
         web.get("/api/health", self.api_health),
         web.get("/api/guilds", self.api_guilds),
-        web.get("/api/guilds/{guild_id}", self.api_guild),
         web.get("/api/guilds/{guild_id}/events", self.api_events),
+        web.get("/api/guilds/{guild_id}/config", self.api_get_config),
+        web.put("/api/guilds/{guild_id}/config", self.api_put_config),
+        web.get("/api/guilds/{guild_id}", self.api_guild),
         web.post("/api/guilds/{guild_id}/announce", self.api_announce),
         web.post("/api/guilds/{guild_id}/moderation/ban", self.api_ban),
         web.post("/api/guilds/{guild_id}/moderation/kick", self.api_kick),
         web.post("/api/guilds/{guild_id}/moderation/timeout", self.api_timeout),
         web.post("/api/guilds/{guild_id}/moderation/delete", self.api_delete),
-        web.get("/api/guilds/{guild_id}/config", self.api_get_config),
-        web.put("/api/guilds/{guild_id}/config", self.api_put_config),
         web.post("/api/webhooks/social", self.api_social_webhook),
         web.get("/oauth/discord/start", self.oauth_start),
         web.get("/oauth/discord/callback", self.oauth_callback),
@@ -143,6 +203,8 @@ RedSentinel._auth = _auth_fixed
 RedSentinel.oauth_callback = _persistent_oauth_callback
 RedSentinel.api_guilds = _api_guilds
 RedSentinel.api_guild = _api_guild
+RedSentinel.api_get_config = _api_get_config
+RedSentinel.api_put_config = _api_put_config
 RedSentinel._start_web = _start_web_fixed
 
 
