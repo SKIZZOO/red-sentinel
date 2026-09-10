@@ -19,6 +19,7 @@ from aiohttp import web
 import discord
 from redbot.core import Config, commands
 from redbot.core.bot import Red
+from redbot.core.data_manager import cog_data_path
 
 log = logging.getLogger("red_sentinel")
 
@@ -39,7 +40,7 @@ class RedSentinel(commands.Cog):
         self.config = Config.get_conf(self, identifier=947281163, force_registration=True)
         self.config.register_global(
             host="0.0.0.0",
-            port=8787,
+            port=2556,
             api_token="",
             public_base_url="",
             netlify_origin="",
@@ -63,7 +64,7 @@ class RedSentinel(commands.Cog):
         self.sessions: dict[str, dict[str, Any]] = {}
 
     async def cog_load(self):
-        data_dir = Path(await self.bot.get_cog_data_path(self))
+        data_dir = Path(cog_data_path(self))
         data_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = data_dir / "sentinel.sqlite3"
         await asyncio.to_thread(self._init_db)
@@ -279,7 +280,6 @@ class RedSentinel(commands.Cog):
         return response
 
     async def _auth(self, request, guild_id: Optional[int] = None):
-        # OAuth session is preferred. Static API token is intended for private/self-hosted installs.
         auth = request.headers.get("Authorization", "")
         token = auth.removeprefix("Bearer ").strip()
         static_token = await self.config.api_token()
@@ -346,7 +346,6 @@ class RedSentinel(commands.Cog):
 
     async def _require_admin(self, request, guild):
         session = await self._auth(request, guild.id)
-        # Static API token is explicitly trusted; OAuth sessions need to be server administrators.
         if session["user_id"] == 0:
             return
         member = guild.get_member(int(session["user_id"]))
@@ -499,7 +498,6 @@ class RedSentinel(commands.Cog):
             user = await r.json()
         async with self.session.get("https://discord.com/api/users/@me/guilds", headers=headers) as r:
             guilds = await r.json()
-        # Only guilds where the OAuth user has Administrator or Manage Guild.
         accessible = []
         for g in guilds:
             perms = int(g.get("permissions", 0))
@@ -563,9 +561,6 @@ class RedSentinel(commands.Cog):
         while True:
             try:
                 await asyncio.sleep(max(15, int(await self.config.social_poll_seconds())))
-                # Provider polling is intentionally opt-in. Configure providers in the web panel
-                # or call the webhook endpoint from Make/Zapier/n8n/your own workers.
-                # This keeps API secrets on the Red host and avoids hard dependency on paid APIs.
                 await self._cleanup_sessions()
             except asyncio.CancelledError:
                 raise
