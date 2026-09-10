@@ -15,13 +15,14 @@ def _persistent_init(self, bot):
 async def _load_session(self, token):
     if not token:
         return None
+    import time
     session = self.sessions.get(token)
-    if session and session.get("expires_at", 0) > __import__("time").time():
+    if session and session.get("expires_at", 0) > time.time():
         return session
     stored = await self.config.web_sessions()
     if isinstance(stored, dict):
         session = stored.get(token)
-        if session and session.get("expires_at", 0) > __import__("time").time():
+        if session and session.get("expires_at", 0) > time.time():
             self.sessions[token] = session
             return session
     return None
@@ -42,7 +43,6 @@ async def _member_can_manage(self, guild, user_id):
 
 async def _auth_fixed(self, request, guild_id=None):
     import hmac
-    import time
     from aiohttp import web
 
     auth = request.headers.get("Authorization", "")
@@ -73,20 +73,20 @@ async def _auth_fixed(self, request, guild_id=None):
         guild = self.bot.get_guild(gid)
         if guild is None:
             raise web.HTTPNotFound(text="Guild not found.")
-        # Do not trust the cached OAuth guild list. Check the actual member
-        # permissions in the guild currently connected to this bot.
+        # Never trust the cached OAuth guild list for authorization. Check the
+        # user's actual Discord permissions in the server where the bot is now.
         if not await _member_can_manage(self, guild, normalized["user_id"]):
             raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
 
     return normalized
 
 
-async def _persistent_oauth_callback(self, request):
-    response = await _original_oauth_callback(self, request)
+async def _persist_sessions(self):
+    import time
     stored = await self.config.web_sessions()
     if not isinstance(stored, dict):
         stored = {}
-    now = __import__("time").time()
+    now = time.time()
     stored = {k: v for k, v in stored.items() if isinstance(v, dict) and v.get("expires_at", 0) > now}
     for session in self.sessions.values():
         try:
@@ -95,7 +95,16 @@ async def _persistent_oauth_callback(self, request):
             session["guild_ids"] = []
     stored.update(self.sessions)
     await self.config.web_sessions.set(stored)
-    return response
+
+
+async def _persistent_oauth_callback(self, request):
+    # The original callback finishes with HTTP 302, which is raised as an
+    # aiohttp HTTPException. Persist the session even when that redirect is raised.
+    try:
+        return await _original_oauth_callback(self, request)
+    except Exception:
+        await _persist_sessions(self)
+        raise
 
 
 async def _guild_count(self, guild):
@@ -120,9 +129,8 @@ async def _api_guilds(self, request):
     user_id = int(session.get("user_id", 0))
     result = []
 
-    # The bot's guild cache is the source of truth: a dashboard can only
-    # manage a server where this bot is actually installed. For OAuth users,
-    # independently verify Administrator / Manage Server on every guild.
+    # Only show servers where this bot is actually installed. For OAuth users,
+    # verify Administrator / Manage Server against the live Discord member.
     for guild in self.bot.guilds:
         if user_id and not await _member_can_manage(self, guild, user_id):
             continue
@@ -161,10 +169,7 @@ async def _api_get_config(self, request):
     if guild is None:
         raise web.HTTPNotFound(text="Guild not found.")
     await self._auth(request, gid)
-    return web.json_response({
-        "providers": await self.config.providers(),
-        "routes": await self.config.routes(),
-    })
+    return web.json_response({"providers": await self.config.providers(), "routes": await self.config.routes()})
 
 
 async def _api_put_config(self, request):
@@ -195,7 +200,6 @@ async def _start_web_fixed(self):
         web.post("/api/guilds/{guild_id}/announce", self.api_announce),
         web.post("/api/guilds/{guild_id}/moderation/ban", self.api_ban),
         web.post("/api/guilds/{guild_id}/moderation/kick", self.api_kick),
-        web.post("/api/guilds/{guild_id}/timeout", self.api_timeout),
         web.post("/api/guilds/{guild_id}/moderation/timeout", self.api_timeout),
         web.post("/api/guilds/{guild_id}/moderation/delete", self.api_delete),
         web.post("/api/webhooks/social", self.api_social_webhook),
