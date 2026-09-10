@@ -36,7 +36,7 @@ async def _auth_fixed(self,request,guild_id=None):
     s=await _load_session(self,token)
     if not s:raise web.HTTPUnauthorized(text="Authentication required.")
     n=dict(s);n["user_id"]=int(n.get("user_id",0))
-    try:n["guild_ids":[int(x) for x in n.get("guild_ids",[])]
+    try:n["guild_ids"]=[int(x) for x in n.get("guild_ids",[])]
     except Exception:n["guild_ids"]=[]
     self.sessions[token]=n
     if guild_id is not None:
