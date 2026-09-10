@@ -11,7 +11,12 @@ async def _chat_channel(self, request):
 
 async def api_channel_messages(self,request):
     guild,channel=await _chat_channel(self,request)
-    try: limit=max(1,min(int(request.query.get("limit",80)),100)); messages=[m async for m in channel.history(limit=limit,oldest_first=False)]
+    try:
+        limit=max(1,min(int(request.query.get("limit",80)),100)); before=request.query.get("before")
+        kw={"limit":limit,"oldest_first":False}
+        if before: kw["before"]=discord.Object(id=int(before))
+        messages=[m async for m in channel.history(**kw)]
+    except (ValueError,TypeError): raise web.HTTPBadRequest(text="Invalid before message ID.")
     except discord.Forbidden as exc: raise web.HTTPForbidden(text=f"Discord denied reading channel history: {exc}")
     except discord.HTTPException as exc: raise web.HTTPBadRequest(text=f"Discord rejected channel history: {exc}")
     result=[]
