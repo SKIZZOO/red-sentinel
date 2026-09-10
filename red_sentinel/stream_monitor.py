@@ -28,14 +28,12 @@ def _name(url: str, supplied: str) -> str:
 
 def _live_from_html(platform: str, text: str) -> bool | None:
     low = text.lower()
-    # Prefer explicit structured live flags. Do not alert on ambiguous pages.
     patterns = {
         "twitch": [r'"islive"\s*:\s*true', r'"islivebroadcast"\s*:\s*true'],
         "youtube": [r'"islivebroadcast"\s*:\s*true', r'"islivenow"\s*:\s*true'],
         "kick": [r'"islive"\s*:\s*true', r'"livestream"\s*:\s*\{'],
     }
     if any(re.search(p, low) for p in patterns.get(platform, [])): return True
-    # Explicit false is useful for structured pages; otherwise unknown.
     if platform == "twitch" and re.search(r'"islive"\s*:\s*false', low): return False
     if platform == "youtube" and re.search(r'"islivebroadcast"\s*:\s*false', low): return False
     if platform == "kick" and re.search(r'"islive"\s*:\s*false', low): return False
@@ -43,15 +41,12 @@ def _live_from_html(platform: str, text: str) -> bool | None:
 
 
 async def _check_source(self, source: dict) -> tuple[bool | None, dict]:
-    url = str(source.get("url", ""))
-    platform = source.get("platform", "twitch")
+    url = str(source.get("url", "")); platform = source.get("platform", "twitch")
     if not url or not self.session: return None, {}
     try:
         async with self.session.get(url, headers={"User-Agent": "RedSentinel/1.0 (+Discord livestream monitor)"}, allow_redirects=True) as r:
             if r.status >= 400: return None, {}
-            text = await r.text(errors="ignore")
-            live = _live_from_html(platform, text)
-            meta = {"status": r.status}
+            text = await r.text(errors="ignore"); live = _live_from_html(platform, text); meta = {"status": r.status}
             title_match = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)', text, re.I)
             if title_match: meta["title"] = title_match.group(1)[:200]
             image_match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)', text, re.I)
@@ -64,22 +59,17 @@ async def _check_source(self, source: dict) -> tuple[bool | None, dict]:
 async def _send_live_alert(self, guild, source, meta):
     channel = guild.get_channel(int(source.get("channel_id", 0)))
     if not isinstance(channel, discord.TextChannel): return False
-    settings = await self.config.stream_settings()
-    gs = settings.get(str(guild.id), {}) if isinstance(settings, dict) else {}
-    title = str(source.get("title") or gs.get("title") or "🔴 {name} is LIVE!")
-    message = str(gs.get("message") or "{name} just went live on {platform}. Come hang out!")
-    name = str(source.get("name") or "Streamer")
-    platform = PLATFORMS.get(source.get("platform"), source.get("platform", "live"))
-    title = title.replace("{name}", name).replace("{platform}", platform)
-    message = message.replace("{name}", name).replace("{platform}", platform)
+    settings = await self.config.stream_settings(); gs = settings.get(str(guild.id), {}) if isinstance(settings, dict) else {}
+    title = str(source.get("title") or gs.get("title") or "🔴 {name} is LIVE!"); message = str(gs.get("message") or "{name} just went live on {platform}. Come hang out!")
+    name = str(source.get("name") or "Streamer"); platform = PLATFORMS.get(source.get("platform"), source.get("platform", "live"))
+    title = title.replace("{name}", name).replace("{platform}", platform); message = message.replace("{name}", name).replace("{platform}", platform)
     color_raw = str(gs.get("color") or "9146FF").replace("#", "")
     try: color = int(color_raw, 16)
     except ValueError: color = 0x9146FF
     embed = discord.Embed(title=title[:256], description=message[:4096], url=str(source.get("url")), color=max(0, min(color, 0xFFFFFF)))
     if meta.get("image") or source.get("image"): embed.set_image(url=str(meta.get("image") or source.get("image")))
     embed.set_footer(text=f"Red Sentinel • {platform} live alert")
-    mention = bool(source.get("mention_everyone", False))
-    content = "@everyone" if mention else None
+    mention = bool(source.get("mention_everyone", False)); content = "@everyone" if mention else None
     await channel.send(content=content, embed=embed, allowed_mentions=discord.AllowedMentions(everyone=mention))
     await self._log_event(guild, "social.livestream", channel=channel, payload={"provider": source.get("platform"), "source_id": source.get("id"), "name": name, "url": source.get("url")})
     return True
@@ -99,11 +89,13 @@ async def stream_loop(self):
                     if not source.get("enabled", True): continue
                     live, meta = await _check_source(self, source)
                     if live is None: continue
-                    was_live = bool(source.get("live", False))
-                    source["last_checked"] = int(time.time())
-                    source["live"] = live
-                    source["status"] = "live" if live else "offline"
-                    if live and not was_live:
+                    was_live = bool(source.get("live", False)); initialized = bool(source.get("initialized", False))
+                    source["last_checked"] = int(time.time()); source["live"] = live; source["status"] = "live" if live else "offline"
+                    # First successful check after a bot restart establishes the current state without
+                    # firing a duplicate alert. Subsequent offline -> live transitions alert normally.
+                    if not initialized:
+                        source["initialized"] = True
+                    elif live and not was_live:
                         try: await _send_live_alert(self, guild, source, meta)
                         except Exception: pass
                     changed = True
@@ -114,27 +106,26 @@ async def stream_loop(self):
         await asyncio.sleep(max(30, min(int(await self.config.social_poll_seconds()), 600)))
 
 
-async def api_streams(self, request):
+async def api_streams(request):
     gid = int(request.match_info["guild_id"]); guild = self.bot.get_guild(gid)
     if not guild: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
     await self._require_admin(request, guild)
     data = await self.config.stream_sources(); items = data.get(str(gid), []) if isinstance(data, dict) else []
-    return web.json_response({"sources": items, "settings": (await self.config.stream_settings()).get(str(gid), {})})
+    settings = await self.config.stream_settings(); return web.json_response({"sources": items, "settings": settings.get(str(gid), {}) if isinstance(settings, dict) else {}})
 
 
-async def api_streams_save(self, request):
+async def api_streams_save(request):
     gid = int(request.match_info["guild_id"]); guild = self.bot.get_guild(gid)
     if not guild: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
     await self._require_admin(request, guild); data = await request.json()
-    sources = await self.config.stream_sources(); all_sources = dict(sources) if isinstance(sources, dict) else {}
-    current = list(all_sources.get(str(gid), [])); action = str(data.get("action", ""))
+    sources = await self.config.stream_sources(); all_sources = dict(sources) if isinstance(sources, dict) else {}; current = list(all_sources.get(str(gid), [])); action = str(data.get("action", ""))
     if action == "add":
         url = str(data.get("url", "")).strip(); name = str(data.get("name", "")).strip(); platform = _platform(url, str(data.get("platform", "twitch")))
         if not url.startswith(("https://", "http://")): raise web.HTTPBadRequest(text="A valid livestream URL is required.")
         try: channel = guild.get_channel(int(str(data.get("channel_id") or "0")))
         except Exception: channel = None
         if not isinstance(channel, discord.TextChannel): raise web.HTTPBadRequest(text="Invalid Discord text channel.")
-        source = {"id": secrets.token_hex(8), "platform": platform, "name": _name(url, name), "url": url, "channel_id": str(channel.id), "title": str(data.get("title", ""))[:256], "image": str(data.get("image", ""))[:1000], "mention_everyone": bool(data.get("mention_everyone", False)), "enabled": True, "live": False, "status": "offline", "last_checked": 0}
+        source = {"id": secrets.token_hex(8), "platform": platform, "name": _name(url, name), "url": url, "channel_id": str(channel.id), "title": str(data.get("title", ""))[:256], "image": str(data.get("image", ""))[:1000], "mention_everyone": bool(data.get("mention_everyone", False)), "enabled": True, "live": False, "status": "offline", "initialized": False, "last_checked": 0}
         current.append(source)
     elif action == "delete": current = [x for x in current if str(x.get("id")) != str(data.get("id"))]
     elif action == "toggle":
@@ -144,7 +135,7 @@ async def api_streams_save(self, request):
     all_sources[str(gid)] = current; await self.config.stream_sources.set(all_sources); return web.json_response({"ok": True, "sources": current})
 
 
-async def api_stream_settings(self, request):
+async def api_stream_settings(request):
     gid = int(request.match_info["guild_id"]); guild = self.bot.get_guild(gid)
     if not guild: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
     await self._require_admin(request, guild); data = await request.json(); settings = await self.config.stream_settings(); all_settings = dict(settings) if isinstance(settings, dict) else {}
@@ -155,12 +146,13 @@ async def api_stream_settings(self, request):
 def patch_streams(RedSentinel):
     original_load = RedSentinel.cog_load; original_unload = RedSentinel.cog_unload
     async def load(self):
-        original_load_result = await original_load(self)
-        self.stream_task = asyncio.create_task(stream_loop(self), name="red-sentinel-stream-monitor")
-        return original_load_result
+        result = await original_load(self); self.stream_task = asyncio.create_task(stream_loop(self), name="red-sentinel-stream-monitor"); return result
     async def unload(self):
         task = getattr(self, "stream_task", None)
-        if task: task.cancel()
+        if task:
+            task.cancel()
+            try: await task
+            except asyncio.CancelledError: pass
         return await original_unload(self)
     RedSentinel.cog_load = load; RedSentinel.cog_unload = unload
     RedSentinel.api_streams = api_streams; RedSentinel.api_streams_save = api_streams_save; RedSentinel.api_stream_settings = api_stream_settings
