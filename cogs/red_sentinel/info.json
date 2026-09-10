@@ -1,0 +1,26 @@
+{
+  "author": [
+    "SKIZZOO"
+  ],
+  "install_msg": "Load with [p]load red_sentinel. Configure the web API with [p]sentinel token.",
+  "name": "Red Sentinel",
+  "short": "Visual web admin panel, audit log, moderation and social announcement routing for Red-DiscordBot.",
+  "description": "A full web control plane for Red-DiscordBot with event logging, moderation actions, announcements, routing and social webhook ingestion.",
+  "tags": [
+    "admin",
+    "moderation",
+    "dashboard",
+    "logging",
+    "social",
+    "web"
+  ],
+  "requirements": [
+    "aiohttp"
+  ],
+  "min_python_version": [
+    3,
+    10
+  ],
+  "hidden": false,
+  "end_user_data_statement": "Red Sentinel stores Discord event audit records and configuration locally on the Red host. Server administrators can delete the local SQLite database to remove stored event records."
+}
