@@ -19,8 +19,7 @@ async def _load_session(self,token):
         if s and s.get("expires_at",0)>time.time():self.sessions[token]=s;return s
     return None
 async def _is_dashboard_owner(self,user_id):
-    try:
-        return int(user_id) in {int(x) for x in getattr(self.bot,"owner_ids",set())}
+    try:return int(user_id) in {int(x) for x in getattr(self.bot,"owner_ids",set())}
     except Exception:return False
 async def _member_can_manage(self,guild,user_id):
     if not user_id:return False
@@ -67,13 +66,13 @@ async def _api_guilds(self,request):
     owner=await _is_dashboard_owner(self,uid)
     for g in self.bot.guilds:
         if not owner and not await _member_can_manage(self,g,uid):continue
-        result.append({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(g)})
+        result.append({"id":str(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(g)})
     result.sort(key=lambda x:x["name"].lower());return web.json_response(result)
 async def _api_guild(self,request):
     from aiohttp import web
     gid=int(request.match_info["guild_id"]);await self._auth(request,gid);g=self.bot.get_guild(gid)
     if g is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
-    return web.json_response({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if getattr(g,"icon",None) else None,"member_count":await _guild_count(g),"channels":[{"id":int(c.id),"name":c.name,"type":str(c.type)} for c in getattr(g,"channels",[])],"roles":[{"id":int(r.id),"name":r.name,"position":r.position} for r in getattr(g,"roles",[]) if not r.is_default()]})
+    return web.json_response({"id":str(g.id),"name":g.name,"icon":str(g.icon.url) if getattr(g,"icon",None) else None,"member_count":await _guild_count(g),"channels":[{"id":str(c.id),"name":c.name,"type":str(c.type)} for c in getattr(g,"channels",[])],"roles":[{"id":str(r.id),"name":r.name,"position":r.position} for r in getattr(g,"roles",[]) if not r.is_default()]})
 async def _start_web_fixed(self):
     from aiohttp import web
     app=web.Application(client_max_size=8*1024*1024)
