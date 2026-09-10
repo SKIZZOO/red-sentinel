@@ -1,0 +1,10 @@
+{
+  "provider": "twitch",
+  "item": {
+    "title": "SKIZZOO is live!",
+    "author": "SKIZZOO",
+    "description": "Come hang out.",
+    "url": "https://twitch.tv/example",
+    "thumbnail": "https://example.com/thumbnail.jpg"
+  }
+}
