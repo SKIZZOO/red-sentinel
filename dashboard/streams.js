@@ -40,4 +40,5 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
   window.loadStreams=loadStreams;
+  if(!window.__redSentinelChatLoader){window.__redSentinelChatLoader=true;const load=()=>{if(document.querySelector('script[data-rs-chat]'))return;const s=document.createElement('script');s.src='./chat.js?v=20260911-2';s.dataset.rsChat='1';document.head.appendChild(s);const c=document.createElement('link');c.rel='stylesheet';c.href='./chat.css?v=20260911-2';document.head.appendChild(c)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load()}
 })();
