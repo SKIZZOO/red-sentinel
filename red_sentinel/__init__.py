@@ -31,18 +31,18 @@ async def _auth_fixed(self,request,guild_id=None):
     token=request.headers.get("Authorization","").removeprefix("Bearer ").strip();static_token=await self.config.api_token()
     if static_token and token:
         try:
-            if hmac.compare_digest(token,static_token):return {"user_id":0,"guild_ids":[int(guild_id)] if guild_id is not None else []}
+            if hmac.compare_digest(token,static_token):return {"user_id":0,"guild_ids":[]}
         except Exception:pass
     s=await _load_session(self,token)
     if not s:raise web.HTTPUnauthorized(text="Authentication required.")
     n=dict(s);n["user_id"]=int(n.get("user_id",0))
-    try:n["guild_ids"]=[int(x) for x in n.get("guild_ids",[])]
+    try:n["guild_ids":[int(x) for x in n.get("guild_ids",[])]
     except Exception:n["guild_ids"]=[]
     self.sessions[token]=n
     if guild_id is not None:
         gid=int(guild_id);guild=self.bot.get_guild(gid)
-        if guild is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}. The bot must be online in this server.")
-        if gid not in n["guild_ids"] and not await _member_can_manage(self,guild,n["user_id"]):raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
+        if guild is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
+        if not await _member_can_manage(self,guild,n["user_id"]):raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
     return n
 async def _persist_sessions(self):
     import time
@@ -60,10 +60,9 @@ async def _guild_count(self,guild):
     except Exception:return len(getattr(guild,"members",[]) or []) or None
 async def _api_guilds(self,request):
     from aiohttp import web
-    s=await self._auth(request);uid=int(s.get("user_id",0));ids={int(x) for x in s.get("guild_ids",[])};result=[]
+    s=await self._auth(request);uid=int(s.get("user_id",0));result=[]
     for g in self.bot.guilds:
-        if uid and ids and int(g.id) not in ids:continue
-        if uid and not ids and not await _member_can_manage(self,g,uid):continue
+        if uid and not await _member_can_manage(self,g,uid):continue
         result.append({"id":int(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(self,g)})
     result.sort(key=lambda x:x["name"].lower());return web.json_response(result)
 async def _api_guild(self,request):
