@@ -3,6 +3,7 @@ from .oauth_setup import SentinelOAuthSetup
 from .enhancements import SentinelEnhancements, patch_red_sentinel
 from .server_patch import patch_server_api
 from .server_control import patch_server_control
+from .action_fixes import patch_action_fixes
 
 _original_init=RedSentinel.__init__;_original_oauth_callback=RedSentinel.oauth_callback
 
@@ -93,6 +94,6 @@ async def _start_web_fixed(self):
         web.get("/api/guilds/{guild_id}/config",self.api_get_config),web.put("/api/guilds/{guild_id}/config",self.api_put_config),web.get("/api/guilds/{guild_id}",self.api_guild),web.post("/api/guilds/{guild_id}/announce",self.api_announce),web.post("/api/guilds/{guild_id}/moderation/ban",self.api_ban),web.post("/api/guilds/{guild_id}/moderation/kick",self.api_kick),web.post("/api/guilds/{guild_id}/moderation/timeout",self.api_timeout),web.post("/api/guilds/{guild_id}/moderation/delete",self.api_delete),web.post("/api/webhooks/social",self.api_social_webhook),web.get("/oauth/discord/start",self.oauth_start),web.get("/oauth/discord/callback",self.oauth_callback),web.get("/api/me",self.api_me)
     ])
     app.middlewares.append(self.cors_middleware);self.runner=web.AppRunner(app);await self.runner.setup();host=await self.config.host();port=await self.config.port();self.site=web.TCPSite(self.runner,host,port);await self.site.start();__import__("logging").getLogger("red_sentinel").info("Red Sentinel API listening on %s:%s",host,port)
-RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel._require_admin=_require_admin_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel)
+RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel._require_admin=_require_admin_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel);patch_action_fixes(RedSentinel)
 async def setup(bot):
     await bot.add_cog(RedSentinel(bot));await bot.add_cog(SentinelOAuthSetup(bot));await bot.add_cog(SentinelEnhancements(bot))
