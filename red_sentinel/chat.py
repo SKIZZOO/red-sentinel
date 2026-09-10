@@ -21,7 +21,10 @@ async def api_channel_messages(self,request):
     except discord.HTTPException as exc: raise web.HTTPBadRequest(text=f"Discord rejected channel history: {exc}")
     result=[]
     for m in reversed(messages):
-        result.append({"id":str(m.id),"author_id":str(m.author.id),"author":str(m.author),"display_name":getattr(m.author,"display_name",str(m.author)),"avatar":str(m.author.display_avatar.url) if getattr(m.author,"display_avatar",None) else None,"content":m.content or "","created_at":m.created_at.timestamp(),"edited_at":m.edited_at.timestamp() if m.edited_at else None,"attachments":[{"url":a.url,"name":a.filename,"content_type":a.content_type} for a in m.attachments],"embeds":[{"title":e.title,"description":e.description,"url":e.url,"image":e.image.url if e.image else None} for e in m.embeds],"reply_to":str(m.reference.message_id) if m.reference and m.reference.message_id else None,"pinned":bool(m.pinned)})
+        embeds=[]
+        for e in m.embeds:
+            embeds.append({"title":e.title,"description":e.description,"url":e.url,"image":e.image.url if e.image else None,"thumbnail":e.thumbnail.url if e.thumbnail else None,"video":e.video.url if e.video else None})
+        result.append({"id":str(m.id),"author_id":str(m.author.id),"author":str(m.author),"display_name":getattr(m.author,"display_name",str(m.author)),"avatar":str(m.author.display_avatar.url) if getattr(m.author,"display_avatar",None) else None,"content":m.content or "","created_at":m.created_at.timestamp(),"edited_at":m.edited_at.timestamp() if m.edited_at else None,"attachments":[{"url":a.url,"name":a.filename,"content_type":a.content_type,"width":a.width,"height":a.height} for a in m.attachments],"embeds":embeds,"reply_to":str(m.reference.message_id) if m.reference and m.reference.message_id else None,"pinned":bool(m.pinned)})
     return web.json_response(result)
 
 async def api_send_chat_message(self,request):
