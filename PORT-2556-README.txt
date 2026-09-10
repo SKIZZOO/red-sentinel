@@ -1,0 +1,1 @@
+Red Sentinel API is configured to use port 2556 in the updated local configuration plan. This file is a temporary marker and can be removed after the cog is updated.
