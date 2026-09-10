@@ -48,6 +48,17 @@ async def _auth_fixed(self,request,guild_id=None):
         if guild is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
         if not await _member_can_manage(self,guild,n["user_id"]):raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
     return n
+async def _require_admin_fixed(self,request,guild):
+    from aiohttp import web
+    session=await self._auth(request,guild.id)
+    uid=int(session.get("user_id",0))
+    if uid==0 or await _is_dashboard_owner(self,uid):return
+    member=guild.get_member(uid)
+    if member is None:
+        try:member=await guild.fetch_member(uid)
+        except Exception:member=None
+    if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):
+        raise web.HTTPForbidden(text="Administrator or Manage Server permission required for dashboard actions.")
 async def _persist_sessions(self):
     import time
     stored=await self.config.web_sessions()
@@ -82,6 +93,6 @@ async def _start_web_fixed(self):
         web.get("/api/guilds/{guild_id}/config",self.api_get_config),web.put("/api/guilds/{guild_id}/config",self.api_put_config),web.get("/api/guilds/{guild_id}",self.api_guild),web.post("/api/guilds/{guild_id}/announce",self.api_announce),web.post("/api/guilds/{guild_id}/moderation/ban",self.api_ban),web.post("/api/guilds/{guild_id}/moderation/kick",self.api_kick),web.post("/api/guilds/{guild_id}/moderation/timeout",self.api_timeout),web.post("/api/guilds/{guild_id}/moderation/delete",self.api_delete),web.post("/api/webhooks/social",self.api_social_webhook),web.get("/oauth/discord/start",self.oauth_start),web.get("/oauth/discord/callback",self.oauth_callback),web.get("/api/me",self.api_me)
     ])
     app.middlewares.append(self.cors_middleware);self.runner=web.AppRunner(app);await self.runner.setup();host=await self.config.host();port=await self.config.port();self.site=web.TCPSite(self.runner,host,port);await self.site.start();__import__("logging").getLogger("red_sentinel").info("Red Sentinel API listening on %s:%s",host,port)
-RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel)
+RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel._require_admin=_require_admin_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel)
 async def setup(bot):
     await bot.add_cog(RedSentinel(bot));await bot.add_cog(SentinelOAuthSetup(bot));await bot.add_cog(SentinelEnhancements(bot))
