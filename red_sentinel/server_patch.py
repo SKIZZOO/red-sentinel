@@ -17,17 +17,24 @@ async def api_announce(self,request):
     try: channel=g.get_channel(int(str(d.get("channel_id") or "0")))
     except (ValueError,TypeError): channel=None
     if not isinstance(channel,discord.TextChannel):raise web.HTTPBadRequest(text="Invalid text channel.")
-    content=str(d.get("content") or "")[:2000];ed=d.get("embed") if isinstance(d.get("embed"),dict) else None;embed=None
+    content=str(d.get("content") or "").strip()[:2000]
+    ed=d.get("embed") if isinstance(d.get("embed"),dict) else None
+    embed=None
     if ed:
-        try:
-            raw=ed.get("color",0x7C5CFC); color=int(str(raw).replace("#",""),16) if not isinstance(raw,int) else raw
-            kw={"color":max(0,min(color,0xFFFFFF))}
-            if ed.get("title"):kw["title"]=str(ed["title"])[:256]
-            if ed.get("description"):kw["description"]=str(ed["description"])[:4096]
-            embed=discord.Embed(**kw)
-            if ed.get("image"):embed.set_image(url=str(ed["image"])[:2048])
-        except (ValueError,TypeError): raise web.HTTPBadRequest(text="Invalid embed data.")
-    if not content and embed is None:raise web.HTTPBadRequest(text="Message content or an embed is required.")
+        title=str(ed.get("title") or "").strip()[:256]
+        description=str(ed.get("description") or "").strip()[:4096]
+        image=str(ed.get("image") or "").strip()[:2048]
+        # A color by itself is not a valid Discord embed. Only create one when it has visible content.
+        if title or description or image:
+            try:
+                raw=ed.get("color",0x7C5CFC);color=int(str(raw).replace("#",""),16) if not isinstance(raw,int) else raw
+                kw={"color":max(0,min(color,0xFFFFFF))}
+                if title:kw["title"]=title
+                if description:kw["description"]=description
+                embed=discord.Embed(**kw)
+                if image:embed.set_image(url=image)
+            except (ValueError,TypeError):raise web.HTTPBadRequest(text="Invalid embed data.")
+    if not content and embed is None:raise web.HTTPBadRequest(text="Message content or embed title, description, or image is required.")
     try:
         m=await channel.send(content=content or None,embed=embed)
     except discord.Forbidden as exc:raise web.HTTPForbidden(text=f"Discord denied sending: {exc}")
