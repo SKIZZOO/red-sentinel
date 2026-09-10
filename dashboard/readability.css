@@ -1,0 +1,28 @@
+/* Red Sentinel responsive readability layer */
+:root{--ui-scale:clamp(.94,calc(.90 + 100vw / 9000),1.12);--ui-text:clamp(14px,calc(12px + .20vw),17px);--ui-small:clamp(11px,calc(10px + .12vw),14px)}
+html{font-size:calc(16px * var(--ui-scale))}
+body{font-size:var(--ui-text);line-height:1.5}
+.sidebar{padding:clamp(18px,2vw,30px) clamp(12px,1.4vw,22px)}
+.nav{padding:clamp(11px,1vw,15px) clamp(12px,1.1vw,16px);font-size:clamp(13px,.9vw + 6px,16px)}
+.brand b{font-size:clamp(12px,.7vw + 7px,15px)}
+main{padding:clamp(22px,2.2vw,42px) clamp(18px,3vw,54px) clamp(50px,5vw,80px);max-width:1900px}
+.topbar{margin-bottom:clamp(20px,2vw,32px)}
+.topbar h1{font-size:clamp(28px,2.2vw,40px)}
+.panel,.stat{padding:clamp(18px,1.5vw,26px)}
+.panel h3{font-size:clamp(18px,1.2vw,22px)}
+.eyebrow{font-size:clamp(9px,.55vw,12px)}
+.hint,td{font-size:var(--ui-small)}
+th{font-size:clamp(9px,.5vw,11px)}
+input,select,textarea{font-size:clamp(14px,.85vw,16px);padding:clamp(11px,.8vw,14px) clamp(12px,1vw,16px);min-height:44px}
+button{font-size:clamp(13px,.82vw,16px)}
+.primary,.ghost,.danger,.warning,.icon-btn{padding:clamp(10px,.8vw,13px) clamp(13px,1vw,17px)}
+.hero{padding:clamp(28px,3vw,48px);min-height:clamp(260px,25vw,360px)}
+.hero h2{font-size:clamp(42px,4vw,68px)}
+.stat strong{font-size:clamp(28px,2.2vw,38px)}
+.social-card b{font-size:clamp(18px,1.3vw,23px)}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:1100px){.app{grid-template-columns:210px 1fr}.social-grid{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.top-actions select{width:min(28vw,230px)}}
+@media(max-width:800px){.app{display:block}.sidebar{position:sticky;height:auto;min-height:0;padding:12px;z-index:100}.brand{margin:2px 8px 12px}.sidebar nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.sidebar-foot{display:none}.nav{font-size:13px;padding:10px 8px}.nav span{margin-left:5px}.topbar{align-items:flex-start;flex-wrap:wrap}.top-actions{width:100%}.top-actions select{flex:1;width:auto}.hero{min-height:230px}.orb{width:150px;height:150px;flex:0 0 150px}.orb-core{inset:45px}.ring{inset:12px}.r2{inset:25px}}
+@media(max-width:560px){html{font-size:16px}.sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}.topbar h1{font-size:27px}.hero{padding:24px;display:block}.hero h2{font-size:40px}.hero p{font-size:14px}.orb{display:none}.stats{grid-template-columns:1fr 1fr}.social-grid{grid-template-columns:1fr}.toolbar{flex-wrap:wrap}.toolbar>*{min-width:0;flex:1}.panel{border-radius:15px}.button-row{gap:7px}}
+@media(max-width:380px){.stats{grid-template-columns:1fr}.nav{font-size:12px}.top-actions{gap:6px}.top-actions .avatar{display:none}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
