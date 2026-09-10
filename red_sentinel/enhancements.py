@@ -96,21 +96,12 @@ async def api_social_webhook(self, request):
     static_token = await self.config.api_token()
     static_ok = bool(static_token and token and hmac.compare_digest(token, static_token))
     if not static_ok:
-        # OAuth dashboard calls must always name exactly one target guild.
         if not guild_id:
             raise web.HTTPBadRequest(text="guild_id is required for authenticated dashboard social events.")
         await self._auth(request, int(guild_id))
 
     provider, external_id, author, title, url, normalized = _provider_item(data)
-    item = {
-        "provider": provider,
-        "external_id": external_id,
-        "author": author,
-        "title": title,
-        "url": url,
-        "payload": normalized,
-        "created_at": int(time.time()),
-    }
+    item = {"provider": provider, "external_id": external_id, "author": author, "title": title, "url": url, "payload": normalized, "created_at": int(time.time())}
     await asyncio.to_thread(self._insert_social_item, item)
 
     targets = []
@@ -127,11 +118,7 @@ async def api_social_webhook(self, request):
         if isinstance(channel, discord.TextChannel):
             targets.append((guild, channel))
 
-    kwargs = {
-        "title": title or f"{provider.upper()} update",
-        "description": normalized.get("description") or (author if author else "New social signal"),
-        "timestamp": discord.utils.utcnow(),
-    }
+    kwargs = {"title": title or f"{provider.upper()} update", "description": normalized.get("description") or (author if author else "New social signal"), "timestamp": discord.utils.utcnow()}
     if url:
         kwargs["url"] = url
     embed = discord.Embed(**kwargs)
@@ -146,16 +133,102 @@ async def api_social_webhook(self, request):
     for guild, channel in targets:
         try:
             await channel.send(embed=embed)
-            await self._log_event(guild, f"social.{provider}", channel=channel, payload={
-                "external_id": external_id,
-                "title": title,
-                "author": author,
-                "url": url,
-            })
+            await self._log_event(guild, f"social.{provider}", channel=channel, payload={"external_id": external_id, "title": title, "author": author, "url": url})
             delivered += 1
         except discord.HTTPException:
             continue
     return web.json_response({"ok": True, "provider": provider, "delivered": delivered})
+
+
+async def _get_members(guild, limit=200):
+    members = list(getattr(guild, "members", []) or [])
+    if not members:
+        try:
+            members = [m async for m in guild.fetch_members(limit=1000)]
+        except Exception:
+            members = []
+    members.sort(key=lambda m: (m.bot, (m.display_name or m.name).lower()))
+    return members[:max(1, min(int(limit), 500))]
+
+
+async def api_members(self, request):
+    gid = int(request.match_info["guild_id"])
+    guild = self.bot.get_guild(gid)
+    if guild is None:
+        raise web.HTTPNotFound(text="Guild not found.")
+    await self._auth(request, gid)
+    query = str(request.query.get("q", "")).strip().lower()
+    limit = max(1, min(int(request.query.get("limit", 200)), 500))
+    members = await _get_members(guild, limit=500)
+    if query:
+        members = [m for m in members if query in str(m.id) or query in m.name.lower() or query in m.display_name.lower()]
+    result = []
+    for m in members[:limit]:
+        result.append({
+            "id": int(m.id), "name": m.name, "display_name": m.display_name,
+            "avatar": str(m.display_avatar.url) if m.display_avatar else None,
+            "bot": bool(m.bot), "joined_at": m.joined_at.isoformat() if m.joined_at else None,
+            "roles": [{"id": int(r.id), "name": r.name, "position": r.position} for r in m.roles if not r.is_default()],
+            "role_ids": [int(r.id) for r in m.roles if not r.is_default()],
+            "timeout_until": m.timed_out_until.isoformat() if m.timed_out_until else None,
+        })
+    return web.json_response({"members": result, "total": guild.member_count or len(guild.members), "cached": len(guild.members)})
+
+
+async def api_member_action(self, request):
+    gid = int(request.match_info["guild_id"])
+    action = request.match_info["action"]
+    guild = self.bot.get_guild(gid)
+    if guild is None:
+        raise web.HTTPNotFound(text="Guild not found.")
+    await self._require_admin(request, guild)
+    data = await self._json(request)
+    member_id = int(data.get("user_id", 0))
+    if not member_id:
+        raise web.HTTPBadRequest(text="user_id is required.")
+    try:
+        member = await self._member_from_payload(guild, data)
+    except ValueError:
+        raise web.HTTPBadRequest(text="Invalid user ID.")
+    reason = str(data.get("reason") or "Red Sentinel dashboard action")[:512]
+    me = guild.me
+
+    try:
+        if action == "nickname":
+            nickname = data.get("nickname")
+            if nickname is not None:
+                nickname = str(nickname).strip()[:32] or None
+            await member.edit(nick=nickname, reason=reason)
+        elif action == "role_add":
+            role = guild.get_role(int(data.get("role_id", 0)))
+            if role is None or role.is_default():
+                raise web.HTTPBadRequest(text="Role not found.")
+            if me and role >= me.top_role:
+                raise web.HTTPForbidden(text="Bot cannot manage this role because it is above the bot's highest role.")
+            await member.add_roles(role, reason=reason)
+        elif action == "role_remove":
+            role = guild.get_role(int(data.get("role_id", 0)))
+            if role is None:
+                raise web.HTTPBadRequest(text="Role not found.")
+            if me and role >= me.top_role:
+                raise web.HTTPForbidden(text="Bot cannot manage this role because it is above the bot's highest role.")
+            await member.remove_roles(role, reason=reason)
+        elif action == "timeout_clear":
+            await member.timeout(None, reason=reason)
+        elif action == "timeout":
+            minutes = max(1, min(int(data.get("minutes", 60)), 40320))
+            await member.timeout(discord.utils.utcnow() + discord.timedelta(minutes=minutes), reason=reason)
+        else:
+            raise web.HTTPBadRequest(text="Unknown member action.")
+    except web.HTTPException:
+        raise
+    except discord.Forbidden as exc:
+        raise web.HTTPForbidden(text=f"Discord denied the action: {exc}")
+    except discord.HTTPException as exc:
+        raise web.HTTPBadRequest(text=f"Discord rejected the action: {exc}")
+
+    await self._log_event(guild, f"admin.member.{action}", target=member, payload={"reason": reason, **{k: v for k, v in data.items() if k in ("role_id", "nickname", "minutes")}})
+    return web.json_response({"ok": True, "action": action, "user_id": member_id})
 
 
 class SentinelEnhancements(commands.Cog):
@@ -217,12 +290,7 @@ class SentinelEnhancements(commands.Cog):
         after_id = getattr(after.channel, "id", None)
         if before_id == after_id:
             return
-        await sentinel._log_event(member.guild, "voice.update", actor=member, target=member, payload={
-            "before_channel_id": before_id,
-            "after_channel_id": after_id,
-            "before_channel": getattr(before.channel, "name", None),
-            "after_channel": getattr(after.channel, "name", None),
-        })
+        await sentinel._log_event(member.guild, "voice.update", actor=member, target=member, payload={"before_channel_id": before_id, "after_channel_id": after_id, "before_channel": getattr(before.channel, "name", None), "after_channel": getattr(after.channel, "name", None)})
 
     @commands.group(name="sentinel")
     @commands.admin_or_permissions(manage_guild=True)
@@ -242,7 +310,8 @@ class SentinelEnhancements(commands.Cog):
 
 
 def patch_red_sentinel(RedSentinel):
-    """Patch API methods before the cog starts its aiohttp server."""
     RedSentinel.api_get_config = api_get_config
     RedSentinel.api_put_config = api_put_config
     RedSentinel.api_social_webhook = api_social_webhook
+    RedSentinel.api_members = api_members
+    RedSentinel.api_member_action = api_member_action
