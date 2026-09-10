@@ -53,15 +53,13 @@ async def _auth_fixed(self,request,guild_id=None):
     return n
 async def _require_admin_fixed(self,request,guild):
     from aiohttp import web
-    session=await self._auth(request,guild.id)
-    uid=int(session.get("user_id",0))
+    session=await self._auth(request,guild.id);uid=int(session.get("user_id",0))
     if uid==0 or await _is_dashboard_owner(self,uid):return
     member=guild.get_member(uid)
     if member is None:
         try:member=await guild.fetch_member(uid)
         except Exception:member=None
-    if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):
-        raise web.HTTPForbidden(text="Administrator or Manage Server permission required for dashboard actions.")
+    if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):raise web.HTTPForbidden(text="Administrator or Manage Server permission required for dashboard actions.")
 async def _persist_sessions(self):
     import time
     stored=await self.config.web_sessions()
@@ -76,8 +74,7 @@ async def _guild_count(guild):
     return len(getattr(guild,"members",[]) or []) or None
 async def _api_guilds(self,request):
     from aiohttp import web
-    s=await self._auth(request);uid=int(s.get("user_id",0));result=[]
-    owner=await _is_dashboard_owner(self,uid)
+    s=await self._auth(request);uid=int(s.get("user_id",0));result=[];owner=await _is_dashboard_owner(self,uid)
     for g in self.bot.guilds:
         if not owner and not await _member_can_manage(self,g,uid):continue
         result.append({"id":str(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(g)})
@@ -93,7 +90,9 @@ async def _start_web_fixed(self):
     app.add_routes([
         web.get("/api/health",self.api_health),web.get("/api/guilds",self.api_guilds),web.get("/api/guilds/{guild_id}/events",self.api_events),web.get("/api/guilds/{guild_id}/members",self.api_members),web.post("/api/guilds/{guild_id}/members/{action}",self.api_member_action),
         web.get("/api/guilds/{guild_id}/channels",self.api_channels),web.post("/api/guilds/{guild_id}/channels/{action}",self.api_channel_action),web.get("/api/guilds/{guild_id}/roles",self.api_roles),web.post("/api/guilds/{guild_id}/roles/{action}",self.api_role_action),web.get("/api/guilds/{guild_id}/audit",self.api_audit),web.post("/api/guilds/{guild_id}/control/{action}",self.api_guild_control),
-        web.get("/api/guilds/{guild_id}/config",self.api_get_config),web.put("/api/guilds/{guild_id}/config",self.api_put_config),web.get("/api/guilds/{guild_id}/streams",self.api_streams),web.post("/api/guilds/{guild_id}/streams",self.api_streams_save),web.put("/api/guilds/{guild_id}/streams/settings",self.api_stream_settings),web.get("/api/guilds/{guild_id}/channels/{channel_id}/messages",self.api_channel_messages),web.get("/api/guilds/{guild_id}",self.api_guild),web.post("/api/guilds/{guild_id}/announce",self.api_announce),web.post("/api/guilds/{guild_id}/moderation/ban",self.api_ban),web.post("/api/guilds/{guild_id}/moderation/kick",self.api_kick),web.post("/api/guilds/{guild_id}/moderation/timeout",self.api_timeout),web.post("/api/guilds/{guild_id}/moderation/delete",self.api_delete),web.post("/api/webhooks/social",self.api_social_webhook),web.get("/oauth/discord/start",self.oauth_start),web.get("/oauth/discord/callback",self.oauth_callback),web.get("/api/me",self.api_me)
+        web.get("/api/guilds/{guild_id}/config",self.api_get_config),web.put("/api/guilds/{guild_id}/config",self.api_put_config),web.get("/api/guilds/{guild_id}/streams",self.api_streams),web.post("/api/guilds/{guild_id}/streams",self.api_streams_save),web.put("/api/guilds/{guild_id}/streams/settings",self.api_stream_settings),
+        web.get("/api/guilds/{guild_id}/channels/{channel_id}/messages",self.api_channel_messages),web.post("/api/guilds/{guild_id}/channels/{channel_id}/messages",self.api_send_chat_message),web.delete("/api/guilds/{guild_id}/channels/{channel_id}/messages/{message_id}",self.api_delete_chat_message),
+        web.get("/api/guilds/{guild_id}",self.api_guild),web.post("/api/guilds/{guild_id}/announce",self.api_announce),web.post("/api/guilds/{guild_id}/moderation/ban",self.api_ban),web.post("/api/guilds/{guild_id}/moderation/kick",self.api_kick),web.post("/api/guilds/{guild_id}/moderation/timeout",self.api_timeout),web.post("/api/guilds/{guild_id}/moderation/delete",self.api_delete),web.post("/api/webhooks/social",self.api_social_webhook),web.get("/oauth/discord/start",self.oauth_start),web.get("/oauth/discord/callback",self.oauth_callback),web.get("/api/me",self.api_me)
     ])
     app.middlewares.append(self.cors_middleware);self.runner=web.AppRunner(app);await self.runner.setup();host=await self.config.host();port=await self.config.port();self.site=web.TCPSite(self.runner,host,port);await self.site.start();__import__("logging").getLogger("red_sentinel").info("Red Sentinel API listening on %s:%s",host,port)
 RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel._require_admin=_require_admin_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel);patch_action_fixes(RedSentinel);patch_streams(RedSentinel);patch_chat_api(RedSentinel)
