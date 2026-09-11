@@ -7,14 +7,12 @@
 #view-server .sc-hero-status{padding:12px 15px!important;border-radius:14px!important;font-size:clamp(10px,.72vw,13px)!important}
 #view-server .sc-hero-status b{font-size:clamp(10px,.72vw,13px)!important}
 #view-server .sc-hero-status small{font-size:clamp(8px,.58vw,11px)!important}
-
 #view-server .sc-stats{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:clamp(9px,1vw,14px)!important;margin:0 0 clamp(12px,1.2vw,18px)!important}
 #view-server .sc-stat{min-height:clamp(82px,7vw,112px)!important;padding:clamp(14px,1.2vw,20px)!important;border-radius:16px!important;gap:12px!important}
 #view-server .sc-stat-icon{width:clamp(38px,2.5vw,48px)!important;height:clamp(38px,2.5vw,48px)!important;border-radius:13px!important;font-size:clamp(15px,1vw,19px)!important}
 #view-server .sc-stat strong{font-size:clamp(25px,1.8vw,34px)!important;line-height:1!important}
 #view-server .sc-stat small{font-size:clamp(8px,.62vw,11px)!important;margin-top:4px!important}
 #view-server .sc-stat i{font-size:clamp(8px,.56vw,10px)!important}
-
 #view-server .server-control-grid{display:grid!important;width:100%!important;grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)!important;gap:clamp(10px,1vw,16px)!important;align-items:start!important}
 #view-server .sc-panel{min-width:0!important;width:100%!important;border-radius:20px!important;overflow:hidden!important}
 #view-server .sc-panel-head{padding:clamp(16px,1.3vw,22px) clamp(17px,1.4vw,24px)!important}
@@ -23,7 +21,6 @@
 #view-server .sc-heading h2{font-size:clamp(17px,1.15vw,22px)!important;line-height:1.1!important}
 #view-server .sc-heading p{font-size:clamp(9px,.62vw,11px)!important;line-height:1.35!important}
 #view-server .sc-create-btn{min-height:clamp(36px,2.6vw,44px)!important;padding:0 clamp(12px,1vw,18px)!important;font-size:clamp(9px,.65vw,12px)!important;border-radius:11px!important}
-
 #view-server .sc-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:8px!important;padding:clamp(12px,1vw,16px) clamp(14px,1.2vw,20px) 8px!important}
 #view-server .sc-toolbar.single{grid-template-columns:minmax(0,1fr) auto!important}
 #view-server .sc-search{height:clamp(40px,2.8vw,46px)!important;border-radius:12px!important}
@@ -32,8 +29,6 @@
 #view-server .sc-filter-note{height:clamp(40px,2.8vw,46px)!important;font-size:clamp(7px,.5vw,10px)!important}
 #view-server .sc-list-head{padding:8px clamp(16px,1.2vw,20px)!important;font-size:clamp(8px,.52vw,10px)!important}
 #view-server .sc-list-head b{min-width:24px!important;height:20px!important;font-size:10px!important}
-
-/* Dense two-column cards inside each control panel */
 #view-server .sc-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;max-height:clamp(360px,42vh,610px)!important;min-height:0!important;overflow:auto!important;padding:8px clamp(10px,1vw,16px) 14px!important;align-content:start!important}
 #view-server .server-item{min-width:0!important;min-height:clamp(68px,5vw,88px)!important;padding:clamp(10px,.9vw,14px)!important;border-radius:15px!important;display:flex!important;align-items:center!important;gap:10px!important;background:linear-gradient(145deg,rgba(19,20,37,.82),rgba(8,9,17,.72))!important}
 #view-server .server-item-main{min-width:0!important;flex:1 1 auto!important}
@@ -45,11 +40,9 @@
 #view-server .role-color-dot{width:clamp(8px,.65vw,12px)!important;height:clamp(8px,.65vw,12px)!important;flex:none!important}
 #view-server .server-item-actions{display:flex!important;align-items:center!important;gap:5px!important;flex:none!important}
 #view-server .server-item-actions button{min-height:clamp(29px,2vw,34px)!important;padding:0 clamp(8px,.65vw,11px)!important;font-size:clamp(7px,.54vw,10px)!important;border-radius:9px!important;white-space:nowrap!important}
-
 #view-server .sc-empty{grid-column:1/-1!important;min-height:160px!important;display:grid!important;place-items:center!important;text-align:center!important;padding:30px!important}
 #view-server .sc-empty strong{font-size:clamp(13px,1vw,17px)!important}
 #view-server .sc-empty small{font-size:clamp(9px,.66vw,11px)!important}
-
 #view-server .sc-settings-panel{margin-top:clamp(10px,1vw,16px)!important}
 #view-server .sc-settings-grid{display:grid!important;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)!important;gap:clamp(14px,1.3vw,22px)!important;padding:clamp(16px,1.4vw,22px)!important}
 #view-server .sc-setting-title,#view-server .sc-subhead{font-size:clamp(10px,.65vw,12px)!important}
@@ -62,7 +55,6 @@
 #view-server .audit-notice{padding:16px!important;border-radius:14px!important}
 #view-server .audit-notice strong{font-size:clamp(11px,.72vw,13px)!important}
 #view-server .audit-notice span,#view-server .audit-notice small{font-size:clamp(9px,.6vw,11px)!important}
-
 @media(min-width:1500px){#view-server{padding-left:0!important;padding-right:0!important}.server-control-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important}.sc-hero{min-height:230px!important}}
 @media(min-width:1900px){#view-server .sc-list{max-height:clamp(430px,48vh,720px)!important}.server-item{min-height:96px!important}.server-item-title strong{font-size:16px!important}.server-item-meta{font-size:10px!important}}
 @media(max-width:1250px){#view-server .server-control-grid{grid-template-columns:minmax(0,1fr) minmax(360px,.8fr)!important}.server-item{flex-direction:column!important;align-items:stretch!important}.server-item-actions{width:100%!important}.server-item-actions button{flex:1 1 auto!important}}
@@ -71,5 +63,61 @@
 @media(max-width:520px){#view-server .sc-stats{grid-template-columns:1fr!important}.server-item{flex-direction:column!important;align-items:stretch!important}.server-item-actions{width:100%!important}.server-item-actions button{flex:1!important}.sc-panel-head{padding:15px!important}.sc-heading h2{font-size:16px!important}}
 @media(prefers-reduced-motion:reduce){#view-server *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
-/* Extra readable desktop sizing — prevent tiny UI on wide displays */
-@media(min-width:1021px){#view-server .sc-heading h2{font-size:clamp(19px,1.35vw,26px)!important}#view-server .sc-heading p{font-size:clamp(10px,.7vw,13px)!important}#view-server .sc-search input{font-size:clamp(13px,.9vw,16px)!important}#view-server .sc-toolbar select{font-size:clamp(12px,.82vw,15px)!important}#view-server .server-item{min-height:clamp(82px,6vw,104px)!important}#view-server .server-item-title strong{font-size:clamp(13px,.9vw,17px)!important}#view-server .server-item-meta{font-size:clamp(9px,.58vw,12px)!important}#view-server .server-item-actions button{min-height:clamp(34px,2.2vw,40px)!important;font-size:clamp(9px,.6vw,12px)!important;padding:0 clamp(9px,.8vw,14px)!important}#view-server .sc-chip{font-size:clamp(7px,.5vw,10px)!important}.sc-list-head{font-size:clamp(9px,.58vw,12px)!important}}
+/* +25% readable UI scale for Server Control — keeps the layout fluid instead of using browser zoom */
+#view-server .sc-hero{padding:clamp(30px,2.7vw,48px) clamp(28px,2.5vw,48px)!important;min-height:clamp(238px,20vw,338px)!important}
+#view-server .sc-hero h1{font-size:clamp(48px,4.25vw,78px)!important}
+#view-server .sc-hero p{font-size:clamp(16px,1.25vw,20px)!important;max-width:900px!important}
+#view-server .sc-kicker{font-size:clamp(10px,.81vw,14px)!important}
+#view-server .sc-hero-status{padding:15px 19px!important;border-radius:17px!important;font-size:clamp(12px,.9vw,16px)!important}
+#view-server .sc-hero-status b{font-size:clamp(12px,.9vw,16px)!important}
+#view-server .sc-hero-status small{font-size:clamp(10px,.73vw,14px)!important}
+#view-server .sc-stats{gap:clamp(11px,1.25vw,18px)!important;margin-bottom:clamp(15px,1.5vw,23px)!important}
+#view-server .sc-stat{min-height:clamp(102px,8.75vw,140px)!important;padding:clamp(18px,1.5vw,25px)!important;border-radius:20px!important;gap:15px!important}
+#view-server .sc-stat-icon{width:clamp(48px,3.1vw,60px)!important;height:clamp(48px,3.1vw,60px)!important;border-radius:16px!important;font-size:clamp(19px,1.25vw,24px)!important}
+#view-server .sc-stat strong{font-size:clamp(31px,2.25vw,43px)!important}
+#view-server .sc-stat small{font-size:clamp(10px,.78vw,14px)!important;margin-top:5px!important}
+#view-server .sc-stat i{font-size:clamp(10px,.7vw,13px)!important}
+#view-server .server-control-grid{gap:clamp(13px,1.25vw,20px)!important}
+#view-server .sc-panel{border-radius:25px!important}
+#view-server .sc-panel-head{padding:clamp(20px,1.65vw,28px) clamp(21px,1.75vw,30px)!important}
+#view-server .sc-heading{gap:15px!important}
+#view-server .sc-icon{width:clamp(48px,3vw,60px)!important;height:clamp(48px,3vw,60px)!important;border-radius:16px!important;font-size:clamp(20px,1.25vw,25px)!important}
+#view-server .sc-heading h2{font-size:clamp(21px,1.45vw,28px)!important}
+#view-server .sc-heading p{font-size:clamp(11px,.78vw,14px)!important}
+#view-server .sc-create-btn{min-height:clamp(45px,3.25vw,55px)!important;padding:0 clamp(15px,1.25vw,22px)!important;font-size:clamp(11px,.81vw,15px)!important;border-radius:14px!important}
+#view-server .sc-toolbar{gap:10px!important;padding:clamp(15px,1.25vw,20px) clamp(17px,1.5vw,25px) 10px!important}
+#view-server .sc-search{height:clamp(50px,3.5vw,58px)!important;border-radius:15px!important}
+#view-server .sc-search input{font-size:clamp(14px,1vw,18px)!important}
+#view-server .sc-toolbar select{min-height:clamp(50px,3.5vw,58px)!important;font-size:clamp(12px,.9vw,16px)!important}
+#view-server .sc-filter-note{height:clamp(50px,3.5vw,58px)!important;font-size:clamp(9px,.63vw,13px)!important}
+#view-server .sc-list-head{padding:10px clamp(20px,1.5vw,25px)!important;font-size:clamp(10px,.65vw,13px)!important}
+#view-server .sc-list-head b{min-width:29px!important;height:24px!important;font-size:12px!important}
+#view-server .sc-list{gap:10px!important;max-height:clamp(450px,46vh,760px)!important;padding:10px clamp(13px,1.25vw,20px) 17px!important}
+#view-server .server-item{min-height:clamp(85px,6.25vw,110px)!important;padding:clamp(13px,1.1vw,18px)!important;border-radius:19px!important;gap:13px!important}
+#view-server .server-item-title{gap:10px!important}
+#view-server .server-item-title strong{font-size:clamp(14px,1vw,19px)!important}
+#view-server .server-item-meta{font-size:clamp(9px,.65vw,12px)!important;margin-top:6px!important}
+#view-server .sc-item-icon{width:clamp(35px,2.4vw,45px)!important;height:clamp(35px,2.4vw,45px)!important;border-radius:12px!important;font-size:clamp(15px,1vw,19px)!important}
+#view-server .sc-chip{font-size:clamp(7px,.56vw,11px)!important;padding:4px 7px!important}
+#view-server .role-color-dot{width:clamp(10px,.8vw,15px)!important;height:clamp(10px,.8vw,15px)!important}
+#view-server .server-item-actions{gap:7px!important}
+#view-server .server-item-actions button{min-height:clamp(36px,2.5vw,44px)!important;padding:0 clamp(10px,.8vw,15px)!important;font-size:clamp(9px,.66vw,13px)!important;border-radius:11px!important}
+#view-server .sc-empty{min-height:200px!important;padding:38px!important}
+#view-server .sc-empty strong{font-size:clamp(16px,1.25vw,21px)!important}
+#view-server .sc-empty small{font-size:clamp(11px,.82vw,14px)!important}
+#view-server .sc-settings-panel{margin-top:clamp(13px,1.25vw,20px)!important}
+#view-server .sc-settings-grid{gap:clamp(18px,1.6vw,28px)!important;padding:clamp(20px,1.75vw,28px)!important}
+#view-server .sc-setting-title,#view-server .sc-subhead{font-size:clamp(12px,.81vw,15px)!important}
+#view-server .sc-settings-form label{font-size:clamp(11px,.75vw,14px)!important}
+#view-server .sc-settings-form input,#view-server .sc-settings-form textarea{min-height:clamp(53px,3.75vw,63px)!important;font-size:clamp(14px,1vw,18px)!important;border-radius:15px!important}
+#view-server .sc-settings-form textarea{min-height:138px!important}
+#view-server .server-audit{max-height:325px!important}
+#view-server .audit-row b{font-size:clamp(12px,.81vw,15px)!important}
+#view-server .audit-row small,#view-server .audit-row time{font-size:clamp(10px,.65vw,12px)!important}
+#view-server .audit-notice{padding:20px!important;border-radius:18px!important}
+#view-server .audit-notice strong{font-size:clamp(14px,.9vw,17px)!important}
+#view-server .audit-notice span,#view-server .audit-notice small{font-size:clamp(11px,.75vw,14px)!important}
+@media(min-width:1500px){#view-server .sc-list{max-height:clamp(500px,50vh,800px)!important}}
+@media(max-width:1020px){#view-server .server-control-grid{grid-template-columns:1fr!important}}
+@media(max-width:760px){#view-server .sc-hero{min-height:210px!important}.sc-list{grid-template-columns:1fr!important}}
+@media(max-width:520px){#view-server .sc-hero h1{font-size:clamp(40px,10vw,54px)!important}.sc-stats{grid-template-columns:1fr!important}.sc-heading h2{font-size:19px!important}.sc-search input{font-size:14px!important}}
