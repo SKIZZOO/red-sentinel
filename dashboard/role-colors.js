@@ -1,4 +1,7 @@
 (()=>{
+  const loadAsset=(tag,attrs)=>{const key=attrs.href||attrs.src;if(document.querySelector(`[data-rs-asset="${key}"]`))return;const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));el.dataset.rsAsset=key;document.head.appendChild(el)};
+  loadAsset('link',{rel:'stylesheet',href:'./logs.css?v=20260911-1'});
+  loadAsset('script',{src:'./logs-enhancements.js?v=20260911-1'});
   const $=s=>document.querySelector(s);
   let cacheGuild='',roles=new Map(),busy=false;
   async function loadRoles(){
