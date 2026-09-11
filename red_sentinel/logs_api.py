@@ -10,6 +10,24 @@ def _avatar(obj):
         return None
 
 
+def _stringify_snowflakes(value):
+    """Keep Discord snowflake IDs as strings so browsers cannot round them."""
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            if key.endswith("_id") or key in {"id", "message_id", "channel_id", "guild_id", "user_id", "actor_id", "target_id"}:
+                if item is not None and isinstance(item, (int, float)):
+                    out[key] = str(item)
+                else:
+                    out[key] = _stringify_snowflakes(item)
+            else:
+                out[key] = _stringify_snowflakes(item)
+        return out
+    if isinstance(value, list):
+        return [_stringify_snowflakes(x) for x in value]
+    return value
+
+
 async def api_events_rich(self, request):
     gid = int(request.match_info["guild_id"])
     guild = self.bot.get_guild(gid)
@@ -51,8 +69,10 @@ async def api_events_rich(self, request):
         row["target_avatar"] = _avatar(target)
         row["actor_display_name"] = getattr(actor, "display_name", None) or row.get("actor_name") or "System"
         row["target_display_name"] = getattr(target, "display_name", None) or row.get("target_name")
-        payload = row.get("payload") or {}
+        payload = _stringify_snowflakes(row.get("payload") or {})
+        row["payload"] = payload
         mid = payload.get("message_id")
+        row["message_id"] = str(mid) if mid is not None else None
         row["message_url"] = (f"https://discord.com/channels/{row['guild_id']}/{row['channel_id']}/{mid}"
                                if row.get("channel_id") and mid else None)
     return web.json_response(rows)
