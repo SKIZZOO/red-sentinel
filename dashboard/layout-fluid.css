@@ -1,0 +1,9 @@
+/* Red Sentinel — fluid desktop canvas. Do not constrain the command center to a max-width. */
+html,body{width:100%;min-width:0}
+.app{width:100%;min-width:0}
+main{width:100%!important;max-width:none!important;margin:0!important;min-width:0!important;box-sizing:border-box!important;padding-left:clamp(14px,1.5vw,30px)!important;padding-right:clamp(14px,1.5vw,30px)!important}
+main > .topbar,main > .view{width:100%!important;max-width:none!important;min-width:0!important}
+#view-server{width:100%!important;max-width:none!important;margin:0!important}
+#view-server .sc-hero,#view-server .sc-stats,#view-server .server-control-grid,#view-server .sc-settings-panel{width:100%!important;max-width:none!important}
+@media(min-width:1600px){main{padding-left:clamp(16px,1.05vw,28px)!important;padding-right:clamp(16px,1.05vw,28px)!important}}
+@media(max-width:800px){main{padding-left:14px!important;padding-right:14px!important}}
