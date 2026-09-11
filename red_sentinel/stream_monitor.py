@@ -57,9 +57,12 @@ async def _check_source(self, source: dict) -> tuple[bool | None, dict]:
 
 
 async def _send_live_alert(self, guild, source, meta):
-    channel = guild.get_channel(int(source.get("channel_id", 0)))
+    try: channel = guild.get_channel(int(str(source.get("channel_id", 0))))
+    except (TypeError, ValueError): channel = None
     if not isinstance(channel, discord.TextChannel): return False
-    settings = await self.config.stream_settings(); gs = settings.get(str(guild.id), {}) if isinstance(settings, dict) else {}
+    try: settings = await self.config.stream_settings()
+    except Exception: settings = {}
+    gs = settings.get(str(guild.id), {}) if isinstance(settings, dict) else {}
     title = str(source.get("title") or gs.get("title") or "🔴 {name} is LIVE!"); message = str(gs.get("message") or "{name} just went live on {platform}. Come hang out!")
     name = str(source.get("name") or "Streamer"); platform = PLATFORMS.get(source.get("platform"), source.get("platform", "live"))
     title = title.replace("{name}", name).replace("{platform}", platform); message = message.replace("{name}", name).replace("{platform}", platform)
@@ -91,10 +94,7 @@ async def stream_loop(self):
                     if live is None: continue
                     was_live = bool(source.get("live", False)); initialized = bool(source.get("initialized", False))
                     source["last_checked"] = int(time.time()); source["live"] = live; source["status"] = "live" if live else "offline"
-                    # First successful check after a bot restart establishes the current state without
-                    # firing a duplicate alert. Subsequent offline -> live transitions alert normally.
-                    if not initialized:
-                        source["initialized"] = True
+                    if not initialized: source["initialized"] = True
                     elif live and not was_live:
                         try: await _send_live_alert(self, guild, source, meta)
                         except Exception: pass
@@ -103,22 +103,40 @@ async def stream_loop(self):
             if changed: await self.config.stream_sources.set(sources)
         except asyncio.CancelledError: raise
         except Exception: pass
-        await asyncio.sleep(max(30, min(int(await self.config.social_poll_seconds()), 600)))
+        try: delay = int(await self.config.social_poll_seconds())
+        except Exception: delay = 60
+        await asyncio.sleep(max(30, min(delay, 600)))
 
 
 async def api_streams(request):
-    gid = int(request.match_info["guild_id"]); guild = self.bot.get_guild(gid)
+    try: gid = int(request.match_info["guild_id"])
+    except (TypeError, ValueError): raise web.HTTPBadRequest(text="Invalid guild id.")
+    guild = self.bot.get_guild(gid)
     if not guild: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
     await self._require_admin(request, guild)
-    data = await self.config.stream_sources(); items = data.get(str(gid), []) if isinstance(data, dict) else []
-    settings = await self.config.stream_settings(); return web.json_response({"sources": items, "settings": settings.get(str(gid), {}) if isinstance(settings, dict) else {}})
+    try: self.config.register_global(stream_sources={}, stream_settings={})
+    except Exception: pass
+    try: data = await self.config.stream_sources()
+    except Exception: data = {}
+    try: settings = await self.config.stream_settings()
+    except Exception: settings = {}
+    if not isinstance(data, dict): data = {}
+    if not isinstance(settings, dict): settings = {}
+    return web.json_response({"sources": data.get(str(gid), []) or [], "settings": settings.get(str(gid), {}) or {}})
 
 
 async def api_streams_save(request):
-    gid = int(request.match_info["guild_id"]); guild = self.bot.get_guild(gid)
+    try: gid = int(request.match_info["guild_id"])
+    except (TypeError, ValueError): raise web.HTTPBadRequest(text="Invalid guild id.")
+    guild = self.bot.get_guild(gid)
     if not guild: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
-    await self._require_admin(request, guild); data = await request.json()
-    sources = await self.config.stream_sources(); all_sources = dict(sources) if isinstance(sources, dict) else {}; current = list(all_sources.get(str(gid), [])); action = str(data.get("action", ""))
+    await self._require_admin(request, guild)
+    data = await request.json()
+    try: self.config.register_global(stream_sources={}, stream_settings={})
+    except Exception: pass
+    try: sources = await self.config.stream_sources()
+    except Exception: sources = {}
+    all_sources = dict(sources) if isinstance(sources, dict) else {}; current = list(all_sources.get(str(gid), [])); action = str(data.get("action", ""))
     if action == "add":
         url = str(data.get("url", "")).strip(); name = str(data.get("name", "")).strip(); platform = _platform(url, str(data.get("platform", "twitch")))
         if not url.startswith(("https://", "http://")): raise web.HTTPBadRequest(text="A valid livestream URL is required.")
@@ -136,9 +154,16 @@ async def api_streams_save(request):
 
 
 async def api_stream_settings(request):
-    gid = int(request.match_info["guild_id"]); guild = self.bot.get_guild(gid)
+    try: gid = int(request.match_info["guild_id"])
+    except (TypeError, ValueError): raise web.HTTPBadRequest(text="Invalid guild id.")
+    guild = self.bot.get_guild(gid)
     if not guild: raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
-    await self._require_admin(request, guild); data = await request.json(); settings = await self.config.stream_settings(); all_settings = dict(settings) if isinstance(settings, dict) else {}
+    await self._require_admin(request, guild); data = await request.json()
+    try: self.config.register_global(stream_sources={}, stream_settings={})
+    except Exception: pass
+    try: settings = await self.config.stream_settings()
+    except Exception: settings = {}
+    all_settings = dict(settings) if isinstance(settings, dict) else {}
     all_settings[str(gid)] = {"title": str(data.get("title") or "🔴 {name} is LIVE!")[:256], "message": str(data.get("message") or "{name} just went live on {platform}. Come hang out!")[:4096], "color": str(data.get("color") or "9146FF").replace("#", "")[:6], "dedupe": bool(data.get("dedupe", True))}
     await self.config.stream_settings.set(all_settings); return web.json_response({"ok": True, "settings": all_settings[str(gid)]})
 
@@ -146,7 +171,10 @@ async def api_stream_settings(request):
 def patch_streams(RedSentinel):
     original_load = RedSentinel.cog_load; original_unload = RedSentinel.cog_unload
     async def load(self):
-        result = await original_load(self); self.stream_task = asyncio.create_task(stream_loop(self), name="red-sentinel-stream-monitor"); return result
+        result = await original_load(self)
+        try: self.config.register_global(stream_sources={}, stream_settings={})
+        except Exception: pass
+        self.stream_task = asyncio.create_task(stream_loop(self), name="red-sentinel-stream-monitor"); return result
     async def unload(self):
         task = getattr(self, "stream_task", None)
         if task:
