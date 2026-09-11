@@ -1,0 +1,113 @@
+/* Red Sentinel — Server Control display tiers for 1080p / 1440p / QHD */
+#view-server{box-sizing:border-box;width:100%!important;max-width:none!important}
+#view-server *{box-sizing:border-box}
+
+/* 1080p class: generous but not oversized */
+@media (min-width:1021px) and (max-width:1919px){
+  #view-server .sc-hero{min-height:220px!important;padding:30px 32px!important}
+  #view-server .sc-hero h1{font-size:52px!important}
+  #view-server .sc-hero p{font-size:16px!important;line-height:1.55!important}
+  #view-server .sc-stats{gap:12px!important}
+  #view-server .sc-stat{min-height:104px!important;padding:18px!important}
+  #view-server .sc-stat strong{font-size:32px!important}
+  #view-server .sc-heading h2{font-size:21px!important}
+  #view-server .sc-heading p{font-size:11px!important}
+  #view-server .sc-create-btn{min-height:42px!important;font-size:11px!important}
+  #view-server .sc-search,#view-server .sc-toolbar select,#view-server .sc-filter-note{height:46px!important;min-height:46px!important}
+  #view-server .sc-search input{font-size:14px!important}
+  #view-server .sc-toolbar select{font-size:13px!important}
+  #view-server .sc-list{gap:9px!important;max-height:480px!important;padding:9px 14px 14px!important}
+  #view-server .server-item{min-height:86px!important;padding:12px!important;border-radius:16px!important}
+  #view-server .server-item-title strong{font-size:14px!important}
+  #view-server .server-item-meta{font-size:9px!important}
+  #view-server .server-item-actions button{min-height:34px!important;font-size:9px!important;padding:0 10px!important}
+  #view-server .sc-settings-grid{padding:20px!important;gap:18px!important}
+  #view-server .sc-settings-form input,#view-server .sc-settings-form textarea{font-size:13px!important}
+}
+
+/* 1080p / Full-HD desktop: 1920x1080 CSS viewport */
+@media (min-width:1920px) and (max-width:2399px){
+  #view-server .sc-hero{min-height:235px!important;padding:32px 36px!important}
+  #view-server .sc-hero h1{font-size:58px!important}
+  #view-server .sc-hero p{font-size:16px!important;max-width:820px!important}
+  #view-server .sc-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important}
+  #view-server .sc-stat{min-height:108px!important;padding:20px!important}
+  #view-server .sc-stat-icon{width:48px!important;height:48px!important}
+  #view-server .sc-stat strong{font-size:34px!important}
+  #view-server .sc-stat small{font-size:11px!important}
+  #view-server .server-control-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important;gap:14px!important}
+  #view-server .sc-panel{border-radius:20px!important}
+  #view-server .sc-panel-head{padding:21px 23px!important}
+  #view-server .sc-icon{width:46px!important;height:46px!important}
+  #view-server .sc-heading h2{font-size:22px!important}
+  #view-server .sc-heading p{font-size:11px!important}
+  #view-server .sc-create-btn{min-height:44px!important;font-size:11px!important}
+  #view-server .sc-toolbar{padding:14px 18px 9px!important}
+  #view-server .sc-search,#view-server .sc-toolbar select,#view-server .sc-filter-note{height:48px!important;min-height:48px!important}
+  #view-server .sc-search input{font-size:14px!important}
+  #view-server .sc-toolbar select{font-size:13px!important}
+  #view-server .sc-list-head{font-size:10px!important}
+  #view-server .sc-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;max-height:500px!important;padding:9px 15px 15px!important}
+  #view-server .server-item{min-height:90px!important;padding:13px!important;border-radius:16px!important}
+  #view-server .server-item-title strong{font-size:14px!important}
+  #view-server .server-item-meta{font-size:9.5px!important}
+  #view-server .server-item-actions button{min-height:35px!important;font-size:9.5px!important}
+  #view-server .sc-settings-panel{margin-top:14px!important}
+  #view-server .sc-settings-grid{padding:21px!important;gap:20px!important}
+  #view-server .sc-settings-form label{font-size:10px!important}
+  #view-server .sc-settings-form input,#view-server .sc-settings-form textarea{font-size:14px!important}
+  #view-server .server-audit{max-height:285px!important}
+}
+
+/* QHD / 2K 2560x1440: scale up once, then stop growing */
+@media (min-width:2400px){
+  #view-server{padding-left:clamp(0px,1.2vw,24px)!important;padding-right:clamp(0px,1.2vw,24px)!important}
+  #view-server .sc-hero{min-height:255px!important;padding:36px 40px!important}
+  #view-server .sc-hero h1{font-size:62px!important}
+  #view-server .sc-hero p{font-size:17px!important;max-width:880px!important}
+  #view-server .sc-kicker{font-size:11px!important}
+  #view-server .sc-hero-status{padding:14px 17px!important}
+  #view-server .sc-stats{gap:16px!important;margin-bottom:18px!important}
+  #view-server .sc-stat{min-height:116px!important;padding:22px!important;border-radius:19px!important}
+  #view-server .sc-stat-icon{width:50px!important;height:50px!important}
+  #view-server .sc-stat strong{font-size:36px!important}
+  #view-server .sc-stat small{font-size:11px!important}
+  #view-server .server-control-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important;gap:16px!important}
+  #view-server .sc-panel{border-radius:21px!important}
+  #view-server .sc-panel-head{padding:23px 25px!important}
+  #view-server .sc-icon{width:49px!important;height:49px!important;font-size:20px!important}
+  #view-server .sc-heading h2{font-size:23px!important}
+  #view-server .sc-heading p{font-size:12px!important}
+  #view-server .sc-create-btn{min-height:46px!important;padding:0 17px!important;font-size:12px!important}
+  #view-server .sc-toolbar{padding:15px 19px 10px!important}
+  #view-server .sc-search,#view-server .sc-toolbar select,#view-server .sc-filter-note{height:50px!important;min-height:50px!important}
+  #view-server .sc-search input{font-size:15px!important}
+  #view-server .sc-toolbar select{font-size:14px!important}
+  #view-server .sc-filter-note{font-size:10px!important}
+  #view-server .sc-list-head{font-size:10px!important}
+  #view-server .sc-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;max-height:540px!important;padding:10px 16px 16px!important}
+  #view-server .server-item{min-height:94px!important;padding:14px!important;border-radius:17px!important}
+  #view-server .server-item-title strong{font-size:15px!important}
+  #view-server .server-item-meta{font-size:10px!important}
+  #view-server .sc-item-icon{width:39px!important;height:39px!important;font-size:16px!important}
+  #view-server .sc-chip{font-size:9px!important;padding:4px 7px!important}
+  #view-server .server-item-actions button{min-height:37px!important;font-size:10px!important;padding:0 11px!important}
+  #view-server .sc-settings-panel{margin-top:15px!important}
+  #view-server .sc-settings-grid{padding:23px!important;gap:22px!important}
+  #view-server .sc-settings-form label{font-size:11px!important}
+  #view-server .sc-settings-form input,#view-server .sc-settings-form textarea{font-size:14px!important}
+  #view-server .server-audit{max-height:320px!important}
+}
+
+/* Very tall displays: add vertical room without changing text scale */
+@media (min-width:1600px) and (min-height:1200px){
+  #view-server .sc-list{max-height:58vh!important}
+  #view-server .server-audit{max-height:34vh!important}
+}
+
+/* Never let a narrow desktop card force microscopic controls */
+@media (min-width:1021px){
+  #view-server .server-item-main{min-width:0!important}
+  #view-server .server-item-title strong{max-width:18ch!important}
+  #view-server .server-item-actions{gap:6px!important}
+}
