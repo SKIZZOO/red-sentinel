@@ -108,7 +108,9 @@ async def stream_loop(self):
         await asyncio.sleep(max(30, min(delay, 600)))
 
 
-async def api_streams(request):
+# These handlers are attached to RedSentinel as class attributes by patch_streams().
+# They therefore become bound methods and MUST accept self first.
+async def api_streams(self, request):
     try: gid = int(request.match_info["guild_id"])
     except (TypeError, ValueError): raise web.HTTPBadRequest(text="Invalid guild id.")
     guild = self.bot.get_guild(gid)
@@ -125,7 +127,7 @@ async def api_streams(request):
     return web.json_response({"sources": data.get(str(gid), []) or [], "settings": settings.get(str(gid), {}) or {}})
 
 
-async def api_streams_save(request):
+async def api_streams_save(self, request):
     try: gid = int(request.match_info["guild_id"])
     except (TypeError, ValueError): raise web.HTTPBadRequest(text="Invalid guild id.")
     guild = self.bot.get_guild(gid)
@@ -153,7 +155,7 @@ async def api_streams_save(request):
     all_sources[str(gid)] = current; await self.config.stream_sources.set(all_sources); return web.json_response({"ok": True, "sources": current})
 
 
-async def api_stream_settings(request):
+async def api_stream_settings(self, request):
     try: gid = int(request.match_info["guild_id"])
     except (TypeError, ValueError): raise web.HTTPBadRequest(text="Invalid guild id.")
     guild = self.bot.get_guild(gid)
