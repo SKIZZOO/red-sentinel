@@ -1,0 +1,136 @@
+/* Red Sentinel — Server Control stacking fix
+   The old viewport-fit rules assigned fixed grid-row heights while the hero/panels
+   also had their own intrinsic heights. That made later content paint underneath
+   the hero. This file returns the control view to normal document flow while
+   retaining the wide side-by-side composition. */
+
+@media (min-width: 801px){
+  body:has(#view-server.active) #view-server{
+    display:flex!important;
+    flex-direction:column!important;
+    width:100%!important;
+    min-height:calc(100vh - 92px)!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+    gap:14px!important;
+    padding:0 0 28px!important;
+    position:relative!important;
+  }
+
+  body:has(#view-server.active) #view-server > .sc-hero{
+    order:1!important;
+    position:relative!important;
+    z-index:20!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    min-height:220px!important;
+    height:auto!important;
+    max-height:none!important;
+    margin:0!important;
+    overflow:hidden!important;
+    transform:none!important;
+  }
+
+  body:has(#view-server.active) #view-server > .sc-stats{
+    order:2!important;
+    position:relative!important;
+    z-index:19!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:78px!important;
+    margin:0!important;
+    transform:none!important;
+  }
+
+  body:has(#view-server.active) #view-server > .server-control-grid{
+    order:3!important;
+    position:relative!important;
+    z-index:18!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:480px!important;
+    max-height:none!important;
+    grid-template-columns:minmax(0,1.14fr) minmax(0,.86fr)!important;
+    align-items:stretch!important;
+    overflow:visible!important;
+    transform:none!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-panel{
+    position:relative!important;
+    z-index:1!important;
+    height:auto!important;
+    min-height:480px!important;
+    max-height:none!important;
+    overflow:hidden!important;
+    transform:none!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-panel-head,
+  body:has(#view-server.active) #view-server .sc-toolbar,
+  body:has(#view-server.active) #view-server .sc-list-head{
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-list{
+    position:relative!important;
+    z-index:2!important;
+    height:360px!important;
+    min-height:360px!important;
+    max-height:360px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+
+  body:has(#view-server.active) #view-server > .sc-settings-panel{
+    order:4!important;
+    position:relative!important;
+    z-index:17!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:145px!important;
+    max-height:none!important;
+    margin:0!important;
+    overflow:hidden!important;
+    transform:none!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-settings-grid{
+    height:auto!important;
+    min-height:94px!important;
+  }
+
+  body:has(#view-server.active) #view-server .server-item-actions,
+  body:has(#view-server.active) #view-server .sc-create-btn,
+  body:has(#view-server.active) #view-server .sc-toolbar select,
+  body:has(#view-server.active) #view-server .sc-filter-note{
+    position:relative!important;
+    z-index:10!important;
+  }
+}
+
+@media (min-width: 1800px) and (min-height: 950px){
+  body:has(#view-server.active) #view-server > .sc-hero{min-height:245px!important}
+  body:has(#view-server.active) #view-server > .server-control-grid{min-height:500px!important}
+  body:has(#view-server.active) #view-server .sc-panel{min-height:500px!important}
+  body:has(#view-server.active) #view-server .sc-list{height:385px!important;min-height:385px!important;max-height:385px!important}
+}
+
+@media (min-width: 801px) and (max-height: 850px){
+  body:has(#view-server.active) #view-server{gap:10px!important;padding-bottom:18px!important}
+  body:has(#view-server.active) #view-server > .sc-hero{min-height:190px!important}
+  body:has(#view-server.active) #view-server > .sc-stats{min-height:68px!important}
+  body:has(#view-server.active) #view-server > .server-control-grid{min-height:410px!important}
+  body:has(#view-server.active) #view-server .sc-panel{min-height:410px!important}
+  body:has(#view-server.active) #view-server .sc-list{height:292px!important;min-height:292px!important;max-height:292px!important}
+  body:has(#view-server.active) #view-server > .sc-settings-panel{min-height:122px!important}
+}
+
+@media (max-width: 800px){
+  #view-server{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+}
