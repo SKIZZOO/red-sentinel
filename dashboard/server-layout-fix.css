@@ -15,7 +15,7 @@
 #view-server .sc-stat small{font-size:clamp(8px,.62vw,11px)!important;margin-top:4px!important}
 #view-server .sc-stat i{font-size:clamp(8px,.56vw,10px)!important}
 
-#view-server .server-control-grid{display:grid!important;width:100%!important;grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)!important;gap:clamp(10px,1vw,16px)!important;align-items:stretch!important}
+#view-server .server-control-grid{display:grid!important;width:100%!important;grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)!important;gap:clamp(10px,1vw,16px)!important;align-items:start!important}
 #view-server .sc-panel{min-width:0!important;width:100%!important;border-radius:20px!important;overflow:hidden!important}
 #view-server .sc-panel-head{padding:clamp(16px,1.3vw,22px) clamp(17px,1.4vw,24px)!important}
 #view-server .sc-heading{gap:12px!important}
@@ -63,11 +63,13 @@
 #view-server .audit-notice strong{font-size:clamp(11px,.72vw,13px)!important}
 #view-server .audit-notice span,#view-server .audit-notice small{font-size:clamp(9px,.6vw,11px)!important}
 
-/* Desktop uses the full surface; never trap the tab in a narrow centered column. */
-@media(min-width:1500px){#view-server{padding-left:0!important;padding-right:0!important}.server-control-grid{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr)!important}}
-@media(min-width:1900px){#view-server .sc-list{max-height:clamp(430px,48vh,720px)!important}.server-item{min-height:92px!important}.server-item-title strong{font-size:15px!important}.server-item-meta{font-size:10px!important}}
-@media(max-width:1250px){#view-server .server-control-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important}.server-item{flex-direction:column!important;align-items:stretch!important}.server-item-actions{width:100%!important}.server-item-actions button{flex:1 1 auto!important}}
+@media(min-width:1500px){#view-server{padding-left:0!important;padding-right:0!important}.server-control-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important}.sc-hero{min-height:230px!important}}
+@media(min-width:1900px){#view-server .sc-list{max-height:clamp(430px,48vh,720px)!important}.server-item{min-height:96px!important}.server-item-title strong{font-size:16px!important}.server-item-meta{font-size:10px!important}}
+@media(max-width:1250px){#view-server .server-control-grid{grid-template-columns:minmax(0,1fr) minmax(360px,.8fr)!important}.server-item{flex-direction:column!important;align-items:stretch!important}.server-item-actions{width:100%!important}.server-item-actions button{flex:1 1 auto!important}}
 @media(max-width:1020px){#view-server .sc-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}#view-server .server-control-grid{grid-template-columns:1fr!important}.server-item{flex-direction:row!important;align-items:center!important}.server-item-actions{width:auto!important}.server-item-actions button{flex:0 0 auto!important}}
 @media(max-width:760px){#view-server .sc-hero{min-height:170px!important}.sc-hero-status{margin-top:14px!important}.sc-hero{flex-direction:column!important;align-items:flex-start!important}.sc-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}.sc-list{grid-template-columns:1fr!important}.sc-toolbar,#view-server .sc-toolbar{grid-template-columns:1fr!important}.sc-settings-grid,#view-server .sc-settings-grid{grid-template-columns:1fr!important}.server-item{flex-direction:row!important}.server-item-actions button{flex:1!important}.server-audit{max-height:300px!important}}
 @media(max-width:520px){#view-server .sc-stats{grid-template-columns:1fr!important}.server-item{flex-direction:column!important;align-items:stretch!important}.server-item-actions{width:100%!important}.server-item-actions button{flex:1!important}.sc-panel-head{padding:15px!important}.sc-heading h2{font-size:16px!important}}
 @media(prefers-reduced-motion:reduce){#view-server *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Extra readable desktop sizing — prevent tiny UI on wide displays */
+@media(min-width:1021px){#view-server .sc-heading h2{font-size:clamp(19px,1.35vw,26px)!important}#view-server .sc-heading p{font-size:clamp(10px,.7vw,13px)!important}#view-server .sc-search input{font-size:clamp(13px,.9vw,16px)!important}#view-server .sc-toolbar select{font-size:clamp(12px,.82vw,15px)!important}#view-server .server-item{min-height:clamp(82px,6vw,104px)!important}#view-server .server-item-title strong{font-size:clamp(13px,.9vw,17px)!important}#view-server .server-item-meta{font-size:clamp(9px,.58vw,12px)!important}#view-server .server-item-actions button{min-height:clamp(34px,2.2vw,40px)!important;font-size:clamp(9px,.6vw,12px)!important;padding:0 clamp(9px,.8vw,14px)!important}#view-server .sc-chip{font-size:clamp(7px,.5vw,10px)!important}.sc-list-head{font-size:clamp(9px,.58vw,12px)!important}}
