@@ -30,7 +30,8 @@
   css('settings-wide-css','./settings-wide.css?v=20260911-1');
   css('settings-true-wide-css','./settings-true-wide.css?v=20260911-1');
   css('guild-selector-css','./guild-selector.css?v=20260911-2');
-  css('guild-selector-premium-css','./guild-selector-premium.css?v=20260911-1');
+  css('guild-selector-premium-css','./guild-selector-premium.css?v=20260911-2');
+  css('guild-selector-fit-css','./guild-selector-fit.css?v=20260911-1');
   load('guild-persistence-js','script','./guild-persistence.js?v=20260911-2');
   load('guild-selector-premium-js','script','./guild-selector-premium.js?v=20260911-1');
   load('server-fix-js','script','./server-fix.js?v=20260911-1');load('platform-icons-js','script','./platform-icons.js?v=20260911-1');
