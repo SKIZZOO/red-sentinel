@@ -13,5 +13,7 @@
   const css=(kind,src)=>{if(document.querySelector(`[data-${kind}]`))return;const e=document.createElement('link');e.rel='stylesheet';e.href=src;e.dataset[kind]='1';document.head.appendChild(e)};
   css('chat-css','./chat.css?v=20260911-6');load('chat-js','script','./chat.js?v=20260911-6');
   css('logs-css','./logs.css?v=20260911-3');load('logs-js','script','./logs-enhancements.js?v=20260911-3');
-  css('moderation-css','./moderation.css?v=20260911-1');load('moderation-js','script','./moderation.js?v=20260911-2');
+  css('moderation-css','./moderation.css?v=20260911-2');load('moderation-js','script','./moderation.js?v=20260911-2');
+  css('confirm-css','./confirm-actions.css?v=20260911-1');load('confirm-js','script','./confirm-actions.js?v=20260911-1');
+  css('moderation-polish-css','./moderation-polish.css?v=20260911-1');load('moderation-polish-js','script','./moderation-polish.js?v=20260911-1');
 })();
