@@ -1,0 +1,44 @@
+/* Red Sentinel — Settings wide workspace */
+@media (min-width:801px){
+  body:has(#view-settings.active) main{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding-left:clamp(18px,1.35vw,34px)!important;
+    padding-right:clamp(18px,1.35vw,34px)!important;
+    box-sizing:border-box!important;
+  }
+  body:has(#view-settings.active) #view-settings{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+  body:has(#view-settings.active) #view-settings > .form-panel{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+    padding:clamp(24px,2.1vw,42px)!important;
+  }
+  body:has(#view-settings.active) #view-settings .form-panel > label{
+    width:100%!important;
+  }
+  body:has(#view-settings.active) #view-settings input{
+    width:100%!important;
+  }
+  @media (min-width:1800px){
+    body:has(#view-settings.active) main{padding-left:28px!important;padding-right:28px!important}
+    body:has(#view-settings.active) #view-settings > .form-panel{padding:34px!important}
+  }
+  @media (min-width:2200px){
+    body:has(#view-settings.active) main{padding-left:36px!important;padding-right:36px!important}
+  }
+}
+@media (max-width:800px){
+  #view-settings{width:100%!important}
+  #view-settings > .form-panel{width:100%!important;max-width:none!important;margin:0!important}
+}
