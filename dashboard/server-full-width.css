@@ -1,0 +1,19 @@
+/* Red Sentinel — Server Control true full-width canvas
+   Removes the centered/narrow wrapper effect while keeping safe gutters. */
+html,body{overflow-x:hidden!important}
+.app{min-width:0!important}
+main{width:100%!important;max-width:none!important;min-width:0!important;box-sizing:border-box!important;padding-left:clamp(14px,1.25vw,30px)!important;padding-right:clamp(14px,1.25vw,30px)!important}
+main>.topbar{width:100%!important;max-width:none!important}
+#view-server{width:100%!important;max-width:none!important;margin:0!important;box-sizing:border-box!important}
+#view-server>*{max-width:none!important}
+#view-server .sc-hero,#view-server .sc-stats,#view-server .server-control-grid,#view-server .sc-settings-panel{width:100%!important;box-sizing:border-box!important}
+#view-server .server-control-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)!important}
+@media(min-width:1500px){
+  main{padding-left:clamp(18px,1vw,28px)!important;padding-right:clamp(18px,1vw,28px)!important}
+  #view-server .server-control-grid{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr)!important}
+}
+@media(min-width:2200px){
+  main{padding-left:clamp(24px,1vw,40px)!important;padding-right:clamp(24px,1vw,40px)!important}
+  #view-server .server-control-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important}
+}
+@media(max-width:1020px){main{padding-left:14px!important;padding-right:14px!important}}
