@@ -11,6 +11,7 @@
   }
   const load=(kind,tag,src)=>{if(document.querySelector(`[data-${kind}]`))return;const e=document.createElement(tag);e.src=src;e.dataset[kind]='1';e.async=false;document.body.appendChild(e)};
   const css=(kind,src)=>{if(document.querySelector(`[data-${kind}]`))return;const e=document.createElement('link');e.rel='stylesheet';e.href=src;e.dataset[kind]='1';document.head.appendChild(e)};
+  css('brand-css','./brand.css?v=20260911-1');load('brand-js','script','./brand.js?v=20260911-1');
   css('chat-css','./chat.css?v=20260911-7');load('chat-js','script','./chat.js?v=20260911-7');load('chat-nav-dedupe-js','script','./chat-nav-dedupe.js?v=20260911-1');
   css('logs-css','./logs.css?v=20260911-7');load('confirm-js','script','./confirm-actions.js?v=20260911-3');load('logs-js','script','./logs-enhancements.js?v=20260911-7');
   css('moderation-css','./moderation.css?v=20260911-2');load('moderation-js','script','./moderation.js?v=20260911-2');
