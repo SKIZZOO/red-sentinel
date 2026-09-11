@@ -19,5 +19,6 @@
   css('moderation-polish-css','./moderation-polish.css?v=20260911-1');load('moderation-polish-js','script','./moderation-polish.js?v=20260911-1');
   css('sidebar-polish-css','./sidebar-polish.css?v=20260911-2');
   css('server-polish-css','./server-polish.css?v=20260911-6');
+  css('server-layout-fix-css','./server-layout-fix.css?v=20260911-3');
   load('server-fix-js','script','./server-fix.js?v=20260911-1');load('platform-icons-js','script','./platform-icons.js?v=20260911-1');
 })();
