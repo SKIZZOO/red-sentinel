@@ -1,0 +1,64 @@
+/* Hard reset for the Server Control canvas. This is intentionally independent
+   of the older layered layout styles so the view cannot be trapped by a max-width. */
+:root{--rs-sidebar-lock:238px}
+@media(max-width:1100px){:root{--rs-sidebar-lock:220px}}
+@media(max-width:800px){:root{--rs-sidebar-lock:0px}}
+
+body.rs-server-fullscreen .app{width:100vw!important;max-width:none!important;min-width:0!important}
+body.rs-server-fullscreen main{
+  width:calc(100vw - var(--rs-sidebar-lock))!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:20px 24px 20px!important;
+  box-sizing:border-box!important;
+  justify-self:stretch!important;
+}
+body.rs-server-fullscreen .topbar{width:100%!important;max-width:none!important;margin-bottom:14px!important}
+body.rs-server-fullscreen #view-server{
+  display:grid!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  box-sizing:border-box!important;
+  gap:12px!important;
+  overflow:hidden!important;
+}
+body.rs-server-fullscreen #view-server .sc-hero,
+body.rs-server-fullscreen #view-server .sc-stats,
+body.rs-server-fullscreen #view-server .server-control-grid,
+body.rs-server-fullscreen #view-server .sc-settings-panel{width:100%!important;max-width:none!important;min-width:0!important}
+body.rs-server-fullscreen #view-server .server-control-grid{grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)!important}
+body.rs-server-fullscreen #view-server .sc-list{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+
+/* 1080p: compact vertical framing, while using every horizontal pixel. */
+@media(min-width:801px) and (max-width:1399px){
+  body.rs-server-fullscreen main{padding:14px 16px!important}
+  body.rs-server-fullscreen .topbar{margin-bottom:9px!important;min-height:44px!important}
+  body.rs-server-fullscreen .topbar h1{font-size:26px!important}
+  body.rs-server-fullscreen #view-server{grid-template-rows:112px 58px minmax(0,1fr) 90px!important;gap:8px!important;height:calc(100vh - 68px)!important}
+  body.rs-server-fullscreen #view-server .server-control-grid{gap:8px!important}
+  body.rs-server-fullscreen #view-server .sc-panel-head{padding:10px 13px!important;min-height:54px!important}
+  body.rs-server-fullscreen #view-server .sc-heading h2{font-size:16px!important}
+  body.rs-server-fullscreen #view-server .sc-create-btn{height:32px!important;min-height:32px!important;font-size:8px!important}
+}
+
+/* 2K/QHD: retain the same framing but let panels breathe. */
+@media(min-width:1400px){
+  body.rs-server-fullscreen main{padding:22px 28px!important}
+  body.rs-server-fullscreen #view-server{grid-template-rows:145px 70px minmax(0,1fr) 112px!important;gap:10px!important;height:calc(100vh - 88px)!important}
+}
+@media(min-width:2200px){
+  body.rs-server-fullscreen main{padding:24px 32px!important}
+  body.rs-server-fullscreen #view-server{grid-template-rows:165px 76px minmax(0,1fr) 124px!important}
+  body.rs-server-fullscreen #view-server .server-control-grid{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)!important;gap:12px!important}
+}
+
+@media(max-width:800px){
+  body.rs-server-fullscreen main{width:100%!important;padding:14px!important}
+  body.rs-server-fullscreen #view-server{display:block!important;height:auto!important;overflow:visible!important}
+  body.rs-server-fullscreen #view-server .server-control-grid{grid-template-columns:1fr!important}
+  body.rs-server-fullscreen #view-server .sc-list{grid-template-columns:1fr!important}
+}
