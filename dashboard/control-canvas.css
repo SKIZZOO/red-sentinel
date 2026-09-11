@@ -1,0 +1,17 @@
+/* Red Sentinel — force Server Control to use the complete content canvas */
+@media (min-width:801px){
+  .app{display:grid!important;grid-template-columns:var(--sidebar-w,248px) minmax(0,1fr)!important;width:100%!important;min-width:0!important}
+  .app>main{grid-column:2!important;justify-self:stretch!important;align-self:stretch!important;width:auto!important;max-width:none!important;min-width:0!important;margin:0!important;padding-left:clamp(18px,1.1vw,30px)!important;padding-right:clamp(18px,1.1vw,30px)!important}
+  #view-server{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important}
+  #view-server>*{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important}
+  #view-server .sc-hero,#view-server .sc-stats,#view-server .server-control-grid,#view-server .sc-settings-panel{width:100%!important;max-width:none!important}
+}
+@media (min-width:1400px){
+  .app>main{padding-left:clamp(20px,1vw,28px)!important;padding-right:clamp(20px,1vw,28px)!important}
+}
+@media (min-width:2200px){
+  .app>main{padding-left:28px!important;padding-right:28px!important}
+}
+@media (max-width:800px){
+  .app>main{width:100%!important;max-width:none!important;margin:0!important}
+}
