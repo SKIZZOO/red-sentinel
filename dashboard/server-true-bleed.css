@@ -1,0 +1,56 @@
+/* Red Sentinel — Server Control true canvas bleed
+   The control view leaves the normal app gutters and occupies the entire
+   viewport area to the right of the fixed sidebar. */
+:root{--rs-sidebar:238px;--rs-server-gutter:20px}
+@media(max-width:1100px){:root{--rs-sidebar:220px}}
+@media(max-width:800px){:root{--rs-sidebar:0px;--rs-server-gutter:14px}}
+
+body:has(#view-server.active) main{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding-left:var(--rs-server-gutter)!important;
+  padding-right:var(--rs-server-gutter)!important;
+  box-sizing:border-box!important;
+  justify-self:stretch!important;
+}
+body:has(#view-server.active) #view-server{
+  width:calc(100vw - var(--rs-sidebar))!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:calc(-1 * var(--rs-server-gutter))!important;
+  margin-right:0!important;
+  box-sizing:border-box!important;
+  padding-left:var(--rs-server-gutter)!important;
+  padding-right:var(--rs-server-gutter)!important;
+}
+body:has(#view-server.active) #view-server > *{
+  width:100%!important;
+  max-width:none!important;
+}
+body:has(#view-server.active) #view-server .sc-hero,
+body:has(#view-server.active) #view-server .sc-stats,
+body:has(#view-server.active) #view-server .server-control-grid,
+body:has(#view-server.active) #view-server .sc-settings-panel{
+  width:100%!important;
+  max-width:none!important;
+}
+body:has(#view-server.active) #view-server .server-control-grid{
+  grid-template-columns:minmax(0,1.16fr) minmax(0,.84fr)!important;
+}
+
+/* 1920 / 1080: maximize horizontal use while keeping readable gutters. */
+@media(min-width:1400px){
+  body:has(#view-server.active) #view-server{padding-left:24px!important;padding-right:24px!important}
+}
+@media(min-width:2200px){
+  body:has(#view-server.active) #view-server{padding-left:32px!important;padding-right:32px!important}
+  body:has(#view-server.active) #view-server .server-control-grid{grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr)!important}
+}
+
+@media(max-width:800px){
+  body:has(#view-server.active) main{padding-left:14px!important;padding-right:14px!important}
+  body:has(#view-server.active) #view-server{width:100%!important;margin-left:0!important;padding-left:0!important;padding-right:0!important}
+  body:has(#view-server.active) #view-server .server-control-grid{grid-template-columns:1fr!important}
+}
