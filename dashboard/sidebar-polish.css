@@ -6,5 +6,7 @@
 .sidebar nav>.nav[data-view="chat"]{padding-left:13px!important;padding-right:13px!important}
 .sidebar nav>.nav[data-view="chat"]>.nav-icon{width:28px!important;min-width:28px!important;max-width:28px!important}
 .sidebar nav>.nav[data-view="chat"]>span:last-child{margin-left:0!important}
+/* Never render duplicate Server Chat navigation entries. The canonical chat item is the first one. */
+.sidebar nav>.nav[data-view="chat"]~.nav[data-view="chat"]{display:none!important}
 @media(max-width:800px){.sidebar nav>.nav{height:44px!important;min-height:44px!important;max-height:44px!important}.sidebar nav>.nav>.nav-icon{height:44px!important}}
 @media(max-width:560px){.sidebar nav>.nav{height:43px!important;min-height:43px!important;max-height:43px!important}.sidebar nav>.nav>.nav-icon{height:43px!important}}
