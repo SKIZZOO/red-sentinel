@@ -28,5 +28,8 @@
   css('server-true-bleed-css','./server-true-bleed.css?v=20260911-2');
   css('server-overlap-fix-css','./server-overlap-fix.css?v=20260911-1');
   css('settings-wide-css','./settings-wide.css?v=20260911-1');
+  css('settings-true-wide-css','./settings-true-wide.css?v=20260911-1');
+  css('guild-selector-css','./guild-selector.css?v=20260911-1');
+  load('guild-persistence-js','script','./guild-persistence.js?v=20260911-1');
   load('server-fix-js','script','./server-fix.js?v=20260911-1');load('platform-icons-js','script','./platform-icons.js?v=20260911-1');
 })();
