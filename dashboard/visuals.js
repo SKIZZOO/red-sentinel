@@ -11,4 +11,6 @@
   }
   if(!document.querySelector('link[data-chat-css]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./chat.css?v=20260911-1';l.dataset.chatCss='1';document.head.appendChild(l)}
   if(!document.querySelector('script[data-chat-js]')){const s=document.createElement('script');s.src='./chat.js?v=20260911-1';s.dataset.chatJs='1';document.body.appendChild(s)}
+  if(!document.querySelector('link[data-logs-css]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./logs.css?v=20260911-3';l.dataset.logsCss='1';document.head.appendChild(l)}
+  if(!document.querySelector('script[data-logs-js]')){const s=document.createElement('script');s.src='./logs-enhancements.js?v=20260911-3';s.dataset.logsJs='1';document.body.appendChild(s)}
 })();
