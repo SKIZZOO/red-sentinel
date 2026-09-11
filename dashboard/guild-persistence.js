@@ -1,11 +1,11 @@
 (()=>{
-  const KEY='red-sentinel:selected-guild';
+  const KEY='rs_guild';
   const read=()=>{try{return localStorage.getItem(KEY)||''}catch{return''}};
-  const write=v=>{try{if(v)localStorage.setItem(KEY,String(v))}catch{}};
+  const write=v=>{try{if(v)localStorage.setItem(KEY,String(v));else localStorage.removeItem(KEY)}catch{}};
   let restoring=false;
   const select=()=>document.querySelector('#guildSelect');
   const restore=()=>{
-    const s=select(), saved=read();
+    const s=select(),saved=read();
     if(!s||!saved||!s.options.length||restoring)return false;
     const exists=[...s.options].some(o=>String(o.value)===String(saved));
     if(!exists)return false;
@@ -21,7 +21,7 @@
     const s=select();
     if(!s||s.dataset.guildPersistBound)return;
     s.dataset.guildPersistBound='1';
-    s.addEventListener('change',()=>{if(!restoring&&s.value)write(s.value)});
+    s.addEventListener('change',()=>{if(!restoring)write(s.value)});
   };
   const tick=()=>{bind();restore()};
   tick();
