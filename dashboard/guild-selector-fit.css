@@ -1,0 +1,24 @@
+/* Red Sentinel — guild selector fit / no clipping */
+.topbar .top-actions{display:flex!important;align-items:center!important;gap:10px!important;min-width:0!important;flex-wrap:nowrap!important}
+.topbar .top-actions .guild-picker{flex:1 1 auto!important;width:clamp(330px,24vw,520px)!important;min-width:330px!important;max-width:520px!important;min-height:0!important}
+.guild-picker__trigger{min-height:50px!important;height:50px!important;grid-template-columns:34px minmax(0,1fr) 22px!important;gap:9px!important;padding:6px 9px!important}
+.guild-picker__orb{width:34px!important;height:34px!important;border-radius:11px!important}
+.guild-picker__copy{min-width:0!important;overflow:visible!important}
+.guild-picker__name{font-size:14px!important;line-height:1.15!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;display:block!important}
+.guild-picker__meta{font-size:8px!important;line-height:1!important}
+.guild-picker__chev{font-size:15px!important}
+.top-actions #guildSelect{display:none!important}
+@media(max-width:1100px){
+  .topbar .top-actions .guild-picker{width:min(390px,calc(100vw - 420px))!important;min-width:300px!important;max-width:390px!important}
+  .guild-picker__name{font-size:13px!important}
+}
+@media(max-width:800px){
+  .topbar .top-actions{width:100%!important}
+  .topbar .top-actions .guild-picker{width:auto!important;min-width:0!important;max-width:none!important;flex:1 1 auto!important}
+  .guild-picker__name{overflow:hidden!important;text-overflow:ellipsis!important}
+}
+@media(max-width:560px){
+  .guild-picker__trigger{height:46px!important;min-height:46px!important}
+  .guild-picker__meta{display:none!important}
+  .guild-picker__name{font-size:12px!important}
+}
