@@ -1,0 +1,116 @@
+/* Red Sentinel — Server Control viewport-fit
+   Goal: readable + dense on 1080p and 2K/QHD, with the whole control surface
+   fitting inside the viewport. Long channel/role lists scroll inside their cards.
+*/
+#view-server{height:calc(100vh - 78px)!important;min-height:620px!important;max-height:calc(100vh - 78px)!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto auto minmax(0,1fr) auto!important;gap:12px!important;padding:0 0 6px!important}
+#view-server .sc-hero{min-height:0!important;height:clamp(128px,10.5vh,158px)!important;margin:0!important;padding:clamp(18px,1.6vw,26px) clamp(20px,1.8vw,32px)!important;display:flex!important;align-items:center!important}
+#view-server .sc-hero h1{font-size:clamp(34px,3vw,50px)!important;line-height:1!important;margin:7px 0 6px!important}
+#view-server .sc-hero p{font-size:clamp(12px,0.82vw,15px)!important;line-height:1.45!important;max-width:min(760px,62vw)!important}
+#view-server .sc-hero-status{padding:10px 13px!important;border-radius:12px!important}
+#view-server .sc-stats{height:clamp(62px,5.3vw,82px)!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;margin:0!important}
+#view-server .sc-stat{min-height:0!important;height:100%!important;padding:12px 14px!important;border-radius:14px!important;gap:10px!important}
+#view-server .sc-stat-icon{width:36px!important;height:36px!important;border-radius:10px!important;font-size:15px!important}
+#view-server .sc-stat strong{font-size:clamp(22px,1.7vw,30px)!important}
+#view-server .sc-stat small{font-size:9px!important}
+#view-server .sc-stat i{font-size:8px!important}
+#view-server .server-control-grid{min-height:0!important;height:100%!important;display:grid!important;grid-template-columns:minmax(0,1.16fr) minmax(360px,.84fr)!important;gap:12px!important;align-items:stretch!important}
+#view-server .sc-panel{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important;border-radius:18px!important}
+#view-server .sc-panel-head{flex:0 0 auto!important;padding:14px 17px!important;min-height:64px!important}
+#view-server .sc-heading{gap:10px!important}
+#view-server .sc-icon{width:36px!important;height:36px!important;border-radius:10px!important;font-size:15px!important}
+#view-server .sc-heading h2{font-size:17px!important;margin:0 0 3px!important}
+#view-server .sc-heading p{font-size:9px!important}
+#view-server .sc-create-btn{min-height:36px!important;font-size:9px!important;padding:0 12px!important}
+#view-server .sc-toolbar{flex:0 0 auto!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:7px!important;padding:9px 12px 6px!important}
+#view-server .sc-toolbar.single{grid-template-columns:minmax(0,1fr) auto!important}
+#view-server .sc-search{height:38px!important;border-radius:10px!important}
+#view-server .sc-search input{font-size:12px!important}
+#view-server .sc-toolbar select{height:38px!important;min-height:38px!important;font-size:11px!important}
+#view-server .sc-filter-note{height:38px!important;font-size:8px!important}
+#view-server .sc-list-head{flex:0 0 auto!important;padding:5px 13px!important;font-size:8px!important}
+#view-server .sc-list-head b{height:18px!important;min-width:22px!important;font-size:9px!important}
+#view-server .sc-list{flex:1 1 auto!important;min-height:0!important;height:auto!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-content:start!important;gap:7px!important;padding:7px 10px 10px!important}
+#view-server .server-item{min-width:0!important;min-height:65px!important;height:auto!important;padding:9px 10px!important;border-radius:13px!important;gap:8px!important}
+#view-server .server-item-title{gap:7px!important}
+#view-server .server-item-title strong{font-size:12px!important;line-height:1.15!important}
+#view-server .server-item-meta{font-size:8px!important;line-height:1.25!important;margin-top:4px!important}
+#view-server .sc-item-icon{width:30px!important;height:30px!important;border-radius:9px!important;font-size:13px!important}
+#view-server .role-color-dot{width:10px!important;height:10px!important}
+#view-server .sc-chip{font-size:7px!important;padding:3px 5px!important}
+#view-server .server-item-actions{gap:4px!important}
+#view-server .server-item-actions button{min-height:28px!important;padding:0 7px!important;font-size:8px!important;border-radius:8px!important}
+#view-server .sc-settings-panel{height:auto!important;min-height:0!important;margin:0!important}
+#view-server .sc-settings-panel .sc-panel-head{min-height:58px!important;padding:12px 17px!important}
+#view-server .sc-settings-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:14px!important;padding:12px 14px 14px!important;min-height:0!important}
+#view-server .sc-setting-title,#view-server .sc-subhead{font-size:10px!important}
+#view-server .sc-settings-form{min-width:0!important}
+#view-server .sc-settings-form label{font-size:9px!important;margin:8px 0!important}
+#view-server .sc-settings-form input{height:38px!important;min-height:38px!important;font-size:11px!important}
+#view-server .sc-settings-form textarea{height:52px!important;min-height:52px!important;font-size:11px!important;resize:none!important}
+#view-server .sc-settings-form .button-row{margin-top:7px!important}
+#view-server .sc-settings-form .primary{min-height:34px!important;font-size:9px!important}
+#view-server .sc-audit-wrap{min-width:0!important;min-height:0!important;padding-left:14px!important;border-left:1px solid rgba(255,255,255,.055)!important}
+#view-server .server-audit{max-height:100px!important;overflow:auto!important}
+#view-server .audit-row{padding:6px 0!important}
+#view-server .audit-row b{font-size:9px!important}
+#view-server .audit-row small,#view-server .audit-row time{font-size:7.5px!important}
+#view-server .audit-notice{padding:12px!important;border-radius:12px!important}
+#view-server .audit-notice strong{font-size:10px!important}
+#view-server .audit-notice span,#view-server .audit-notice small{font-size:8px!important;line-height:1.3!important}
+/* QHD / 2K: give the content breathing room without increasing vertical footprint. */
+@media(min-width:2200px){
+  #view-server{gap:14px!important}
+  #view-server .sc-panel-head{padding:16px 20px!important}
+  #view-server .sc-heading h2{font-size:19px!important}
+  #view-server .sc-heading p{font-size:10px!important}
+  #view-server .sc-search{height:42px!important}
+  #view-server .sc-search input{font-size:13px!important}
+  #view-server .sc-toolbar select,#view-server .sc-filter-note{height:42px!important;min-height:42px!important;font-size:12px!important}
+  #view-server .server-item{min-height:72px!important;padding:10px 11px!important}
+  #view-server .server-item-title strong{font-size:13px!important}
+  #view-server .server-item-meta{font-size:8.5px!important}
+  #view-server .server-item-actions button{min-height:30px!important;font-size:8.5px!important;padding:0 8px!important}
+  #view-server .sc-settings-grid{padding:14px 16px 15px!important}
+  #view-server .sc-settings-form input{height:42px!important;min-height:42px!important;font-size:12px!important}
+  #view-server .sc-settings-form textarea{height:58px!important;min-height:58px!important;font-size:12px!important}
+}
+/* 1080p and smaller desktop: keep everything in one viewport, reduce vertical chrome first. */
+@media(min-width:800px) and (max-width:1399px){
+  #view-server{height:calc(100vh - 70px)!important;max-height:calc(100vh - 70px)!important;gap:9px!important}
+  #view-server .sc-hero{height:118px!important;padding:16px 20px!important}
+  #view-server .sc-hero h1{font-size:34px!important}
+  #view-server .sc-hero p{font-size:12px!important;max-width:600px!important}
+  #view-server .sc-stats{height:60px!important;gap:8px!important}
+  #view-server .sc-stat{padding:9px 11px!important}
+  #view-server .sc-stat-icon{width:30px!important;height:30px!important;font-size:13px!important}
+  #view-server .sc-stat strong{font-size:21px!important}
+  #view-server .sc-stat small{font-size:8px!important}
+  #view-server .server-item{min-height:60px!important;padding:8px!important}
+  #view-server .server-item-title strong{font-size:11px!important}
+  #view-server .server-item-meta{font-size:7.5px!important}
+  #view-server .server-item-actions button{min-height:26px!important;font-size:7.5px!important}
+  #view-server .sc-settings-grid{padding:9px 11px 10px!important}
+  #view-server .sc-settings-form label{margin:5px 0!important}
+  #view-server .sc-settings-form input{height:34px!important;min-height:34px!important}
+  #view-server .sc-settings-form textarea{height:44px!important;min-height:44px!important}
+  #view-server .server-audit{max-height:82px!important}
+}
+@media(max-width:1020px){
+  #view-server{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important;display:block!important;padding-bottom:28px!important}
+  #view-server .sc-hero{height:auto!important;min-height:150px!important;margin-bottom:10px!important}
+  #view-server .sc-stats{height:auto!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;margin-bottom:10px!important}
+  #view-server .sc-stat{min-height:70px!important}
+  #view-server .server-control-grid{height:auto!important;grid-template-columns:1fr!important}
+  #view-server .sc-panel{height:auto!important;min-height:420px!important;margin-bottom:10px!important}
+  #view-server .sc-settings-panel{min-height:0!important}
+}
+@media(max-width:600px){
+  #view-server .sc-hero{padding:17px!important}
+  #view-server .sc-hero h1{font-size:31px!important}
+  #view-server .sc-hero p{font-size:12px!important}
+  #view-server .sc-stats{grid-template-columns:1fr!important}
+  #view-server .sc-list{grid-template-columns:1fr!important}
+  #view-server .sc-toolbar{grid-template-columns:1fr!important}
+  #view-server .sc-settings-grid{grid-template-columns:1fr!important}
+  #view-server .sc-audit-wrap{border-left:0!important;border-top:1px solid rgba(255,255,255,.055)!important;padding-left:0!important;padding-top:12px!important}
+}
