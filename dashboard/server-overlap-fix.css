@@ -1,0 +1,118 @@
+/* Red Sentinel — final Server Control overlap correction
+   Keeps every section in normal grid flow. The hero can no longer spill into
+   the stats / control row, so buttons never render underneath it. */
+@media (min-width: 1021px){
+  body:has(#view-server.active) #view-server{
+    display:grid!important;
+    grid-template-rows:150px 70px minmax(0,1fr) 118px!important;
+    gap:10px!important;
+    height:calc(100vh - 92px)!important;
+    min-height:0!important;
+    max-height:calc(100vh - 92px)!important;
+    overflow:hidden!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-hero{
+    grid-row:1!important;
+    height:150px!important;
+    min-height:150px!important;
+    max-height:150px!important;
+    margin:0!important;
+    align-self:stretch!important;
+    position:relative!important;
+    z-index:1!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-stats{
+    grid-row:2!important;
+    height:70px!important;
+    min-height:70px!important;
+    max-height:70px!important;
+    margin:0!important;
+    position:relative!important;
+    z-index:2!important;
+  }
+
+  body:has(#view-server.active) #view-server .server-control-grid{
+    grid-row:3!important;
+    min-height:0!important;
+    height:100%!important;
+    overflow:hidden!important;
+    position:relative!important;
+    z-index:2!important;
+    display:grid!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-panel{
+    min-height:0!important;
+    height:100%!important;
+    overflow:hidden!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-settings-panel{
+    grid-row:4!important;
+    height:118px!important;
+    min-height:118px!important;
+    max-height:118px!important;
+    margin:0!important;
+    position:relative!important;
+    z-index:2!important;
+    overflow:hidden!important;
+  }
+
+  body:has(#view-server.active) #view-server .sc-list{
+    min-height:0!important;
+    max-height:none!important;
+    height:auto!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+
+  /* Stop decorative transforms from creating stacking surprises. */
+  body:has(#view-server.active) #view-server .sc-hero,
+  body:has(#view-server.active) #view-server .sc-panel,
+  body:has(#view-server.active) #view-server .sc-stat{
+    transform:none!important;
+  }
+}
+
+@media (min-width: 1800px) and (min-height: 1000px){
+  body:has(#view-server.active) #view-server{
+    grid-template-rows:165px 78px minmax(0,1fr) 132px!important;
+    height:calc(100vh - 102px)!important;
+    max-height:calc(100vh - 102px)!important;
+  }
+  body:has(#view-server.active) #view-server .sc-hero{
+    height:165px!important;
+    min-height:165px!important;
+    max-height:165px!important;
+  }
+  body:has(#view-server.active) #view-server .sc-stats{
+    height:78px!important;
+    min-height:78px!important;
+    max-height:78px!important;
+  }
+  body:has(#view-server.active) #view-server .sc-settings-panel{
+    height:132px!important;
+    min-height:132px!important;
+    max-height:132px!important;
+  }
+}
+
+@media (max-width:1020px){
+  body:has(#view-server.active) #view-server{
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  body:has(#view-server.active) #view-server .sc-hero,
+  body:has(#view-server.active) #view-server .sc-stats,
+  body:has(#view-server.active) #view-server .server-control-grid,
+  body:has(#view-server.active) #view-server .sc-settings-panel{
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+  }
+}
