@@ -9,22 +9,51 @@ from .chat import patch_chat_api
 from .logs_api import patch_logs_api
 
 _original_init=RedSentinel.__init__;_original_oauth_callback=RedSentinel.oauth_callback
+SESSION_TTL=30*24*60*60
 
 def _persistent_init(self,bot):
     _original_init(self,bot);self.config.register_global(web_sessions={},stream_sources={},stream_settings={})
-async def _load_session(self,token):
-    if not token:return None
+
+async def _persist_sessions(self):
     import time
-    s=self.sessions.get(token)
-    if s and s.get("expires_at",0)>time.time():return s
     stored=await self.config.web_sessions()
+    if not isinstance(stored,dict):stored={}
+    now=time.time();stored={k:v for k,v in stored.items() if isinstance(v,dict) and v.get("expires_at",0)>now}
+    for token,session in self.sessions.items():
+        if isinstance(session,dict):
+            s=dict(session);s["expires_at"]=now+SESSION_TTL;stored[token]=s
+            self.sessions[token]=s
+    await self.config.web_sessions.set(stored)
+
+async def _load_session(self,token):
+    import time
+    if not token:return None
+    now=time.time();s=self.sessions.get(token)
+    if s and s.get("expires_at",0)>now:
+        if s.get("expires_at",0)<now+7*24*60*60:
+            s=dict(s);s["expires_at"]=now+SESSION_TTL;self.sessions[token]=s
+            try:
+                stored=await self.config.web_sessions()
+                if not isinstance(stored,dict):stored={}
+                stored[token]=s;await self.config.web_sessions.set(stored)
+            except Exception:pass
+        return s
+    try:stored=await self.config.web_sessions()
+    except Exception:stored={}
     if isinstance(stored,dict):
         s=stored.get(token)
-        if s and s.get("expires_at",0)>time.time():self.sessions[token]=s;return s
+        if isinstance(s,dict) and s.get("expires_at",0)>now:
+            s=dict(s);s["expires_at"]=now+SESSION_TTL;self.sessions[token]=s
+            try:
+                stored[token]=s;await self.config.web_sessions.set(stored)
+            except Exception:pass
+            return s
     return None
+
 async def _is_dashboard_owner(self,user_id):
     try:return int(user_id) in {int(x) for x in getattr(self.bot,"owner_ids",set())}
     except Exception:return False
+
 async def _member_can_manage(self,guild,user_id):
     if not user_id:return False
     if await _is_dashboard_owner(self,user_id):return True
@@ -33,6 +62,7 @@ async def _member_can_manage(self,guild,user_id):
         try:member=await guild.fetch_member(int(user_id))
         except Exception:return False
     p=member.guild_permissions;return bool(p.administrator or p.manage_guild)
+
 async def _auth_fixed(self,request,guild_id=None):
     import hmac
     from aiohttp import web
@@ -52,6 +82,7 @@ async def _auth_fixed(self,request,guild_id=None):
         if guild is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
         if not await _member_can_manage(self,guild,n["user_id"]):raise web.HTTPForbidden(text="Administrator or Manage Server permission required.")
     return n
+
 async def _require_admin_fixed(self,request,guild):
     from aiohttp import web
     session=await self._auth(request,guild.id);uid=int(session.get("user_id",0))
@@ -61,18 +92,25 @@ async def _require_admin_fixed(self,request,guild):
         try:member=await guild.fetch_member(uid)
         except Exception:member=None
     if not member or not (member.guild_permissions.administrator or member.guild_permissions.manage_guild):raise web.HTTPForbidden(text="Administrator or Manage Server permission required for dashboard actions.")
-async def _persist_sessions(self):
-    import time
-    stored=await self.config.web_sessions()
-    if not isinstance(stored,dict):stored={}
-    now=time.time();stored={k:v for k,v in stored.items() if isinstance(v,dict) and v.get("expires_at",0)>now};stored.update(self.sessions);await self.config.web_sessions.set(stored)
+
 async def _persistent_oauth_callback(self,request):
-    try:return await _original_oauth_callback(self,request)
-    except Exception:await _persist_sessions(self);raise
+    from aiohttp import web
+    try:
+        return await _original_oauth_callback(self,request)
+    except web.HTTPFound:
+        try:await _persist_sessions(self)
+        except Exception:pass
+        raise
+    except Exception:
+        try:await _persist_sessions(self)
+        except Exception:pass
+        raise
+
 async def _guild_count(guild):
     c=getattr(guild,"member_count",None)
     if c is not None:return c
     return len(getattr(guild,"members",[]) or []) or None
+
 async def _api_guilds(self,request):
     from aiohttp import web
     s=await self._auth(request);uid=int(s.get("user_id",0));result=[];owner=await _is_dashboard_owner(self,uid)
@@ -80,11 +118,13 @@ async def _api_guilds(self,request):
         if not owner and not await _member_can_manage(self,g,uid):continue
         result.append({"id":str(g.id),"name":g.name,"icon":str(g.icon.url) if g.icon else None,"member_count":await _guild_count(g)})
     result.sort(key=lambda x:x["name"].lower());return web.json_response(result)
+
 async def _api_guild(self,request):
     from aiohttp import web
     gid=int(request.match_info["guild_id"]);await self._auth(request,gid);g=self.bot.get_guild(gid)
     if g is None:raise web.HTTPNotFound(text=f"Guild not available to the running bot: {gid}")
     return web.json_response({"id":str(g.id),"name":g.name,"icon":str(g.icon.url) if getattr(g,"icon",None) else None,"member_count":await _guild_count(g),"channels":[{"id":str(c.id),"name":c.name,"type":str(c.type),"category":c.category.name if getattr(c,"category",None) else None} for c in getattr(g,"channels",[])],"roles":[{"id":str(r.id),"name":r.name,"position":r.position} for r in getattr(g,"roles",[]) if not r.is_default()]})
+
 async def _start_web_fixed(self):
     from aiohttp import web
     app=web.Application(client_max_size=8*1024*1024)
@@ -96,6 +136,8 @@ async def _start_web_fixed(self):
         web.get("/api/guilds/{guild_id}",self.api_guild),web.post("/api/guilds/{guild_id}/announce",self.api_announce),web.post("/api/guilds/{guild_id}/moderation/ban",self.api_ban),web.post("/api/guilds/{guild_id}/moderation/kick",self.api_kick),web.post("/api/guilds/{guild_id}/moderation/timeout",self.api_timeout),web.post("/api/guilds/{guild_id}/moderation/delete",self.api_delete),web.post("/api/webhooks/social",self.api_social_webhook),web.get("/oauth/discord/start",self.oauth_start),web.get("/oauth/discord/callback",self.oauth_callback),web.get("/api/me",self.api_me)
     ])
     app.middlewares.append(self.cors_middleware);self.runner=web.AppRunner(app);await self.runner.setup();host=await self.config.host();port=await self.config.port();self.site=web.TCPSite(self.runner,host,port);await self.site.start();__import__("logging").getLogger("red_sentinel").info("Red Sentinel API listening on %s:%s",host,port)
+
 RedSentinel.__init__=_persistent_init;RedSentinel._auth=_auth_fixed;RedSentinel._require_admin=_require_admin_fixed;RedSentinel.oauth_callback=_persistent_oauth_callback;RedSentinel.api_guilds=_api_guilds;RedSentinel.api_guild=_api_guild;RedSentinel._start_web=_start_web_fixed;patch_red_sentinel(RedSentinel);patch_server_api(RedSentinel);patch_server_control(RedSentinel);patch_action_fixes(RedSentinel);patch_streams(RedSentinel);patch_chat_api(RedSentinel);patch_logs_api(RedSentinel)
+
 async def setup(bot):
     await bot.add_cog(RedSentinel(bot));await bot.add_cog(SentinelOAuthSetup(bot));await bot.add_cog(SentinelEnhancements(bot))
