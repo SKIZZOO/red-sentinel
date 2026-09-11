@@ -1,0 +1,40 @@
+/* Red Sentinel — live activity + logs visual layer */
+.activity{display:grid;gap:7px}
+.activity-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 13px;border:1px solid rgba(255,255,255,.045);border-radius:14px;background:linear-gradient(90deg,rgba(255,255,255,.025),rgba(124,92,252,.018));transition:transform .2s ease,border-color .2s ease,background .2s ease}
+.activity-row:hover{transform:translateX(3px);border-color:rgba(170,135,255,.18);background:rgba(139,92,246,.055)}
+.activity-row .dot{width:10px;height:10px;border-radius:50%;margin:auto;position:relative;background:#9b6cff;box-shadow:0 0 0 5px rgba(155,108,255,.08),0 0 18px rgba(155,108,255,.5)}
+.activity-row .dot:after{content:'';position:absolute;inset:-5px;border:1px solid rgba(155,108,255,.18);border-radius:50%;animation:activityPulse 2.4s ease-out infinite}
+.activity-row b{font-size:12px;color:#f2eff9;letter-spacing:-.01em}
+.activity-row small{font-size:10px;color:#777386}
+.activity-row>small{white-space:nowrap;font-variant-numeric:tabular-nums}
+.activity-row .activity-meta{display:flex;align-items:center;gap:7px;margin-top:4px;flex-wrap:wrap}
+.activity-row .activity-channel{color:#aaa3b9}
+.activity-row .activity-event{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid rgba(155,108,255,.18);background:rgba(139,92,246,.08);color:#bdaaff;font-size:8px;font-weight:800;letter-spacing:.04em}
+.activity-row .activity-detail{display:block;margin-top:5px;color:#686475;font-size:10px;line-height:1.4;max-width:680px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logs-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+.logs-head .eyebrow{margin-bottom:5px}
+.logs-head h2{margin:0;font-size:clamp(24px,3vw,34px);letter-spacing:-.045em}
+.logs-head p{margin:7px 0 0;color:#777386;font-size:12px;max-width:650px}
+.logs-live-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(74,222,128,.16);border-radius:999px;background:rgba(74,222,128,.045);color:#a9e8bb;font-size:9px;font-weight:850;letter-spacing:.1em}
+.logs-live-badge i{width:6px;height:6px;border-radius:50%;background:#72e29b;box-shadow:0 0 12px rgba(114,226,155,.65);animation:activityPulse 1.8s ease-out infinite}
+.logs-toolbar{display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(180px,1fr) auto;gap:10px;margin-bottom:12px}
+.logs-toolbar>*{min-width:0}
+.logs-panel{overflow:hidden}
+.logs-table-wrap{overflow:auto;border-radius:18px}
+.logs-table{width:100%;border-collapse:separate;border-spacing:0;min-width:780px}
+.logs-table thead th{position:sticky;top:0;z-index:1;background:rgba(13,12,20,.94);backdrop-filter:blur(12px);padding:13px 15px;color:#777386;font-size:8px;letter-spacing:.14em;font-weight:900;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}
+.logs-table tbody tr{transition:background .18s ease}
+.logs-table tbody tr:hover{background:rgba(139,92,246,.045)}
+.logs-table td{padding:13px 15px;border-bottom:1px solid rgba(255,255,255,.045);font-size:11px;vertical-align:middle}
+.logs-table td:first-child{color:#8d8899;white-space:nowrap;font-variant-numeric:tabular-nums}
+.logs-table td:nth-child(3){font-weight:650;color:#e0dce9;white-space:nowrap}
+.logs-table td:nth-child(4){color:#aaa5b5;white-space:nowrap}
+.logs-table td:last-child{color:#c3becd;line-height:1.45;min-width:280px}
+.logs-event{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border-radius:8px;border:1px solid rgba(155,108,255,.18);background:linear-gradient(135deg,rgba(139,92,246,.14),rgba(139,92,246,.045));color:#cbbaff;font-size:9px;font-weight:800;white-space:nowrap}
+.logs-event-dot{width:5px;height:5px;border-radius:50%;background:#a77cff;box-shadow:0 0 8px rgba(167,124,255,.55)}
+.logs-channel{display:inline-flex;align-items:center;gap:5px;color:#b5afc0}
+.logs-channel:before{content:'#';color:#6d6878}
+.logs-detail{display:block;max-width:620px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes activityPulse{0%{transform:scale(.7);opacity:.8}70%{transform:scale(1.45);opacity:0}100%{transform:scale(1.45);opacity:0}}
+@media(max-width:760px){.logs-head{align-items:flex-start;flex-direction:column}.logs-toolbar{grid-template-columns:1fr}.activity-row{grid-template-columns:28px minmax(0,1fr)}.activity-row>small{grid-column:2}.logs-table{min-width:700px}}
+@media(prefers-reduced-motion:reduce){.activity-row .dot:after,.logs-live-badge i{animation:none}.activity-row{transition:none}}
