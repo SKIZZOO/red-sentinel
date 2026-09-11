@@ -88,7 +88,7 @@ async def api_role_action(self, request):
                 role=await role.edit(**kwargs)
             elif action == "delete": await role.delete(reason=reason)
             else: raise web.HTTPBadRequest(text="Unknown role action.")
-        await self._log_event(guild, f"admin.role.{action}", target=role, payload={"name": getattr(role,"name",None),"reason":reason})
+        await self._log_event(guild, f"admin.role.{action}", target=role, payload={"name":getattr(role,"name",None),"reason":reason})
         return web.json_response({"ok": True, "role": {"id": str(role.id), "name": role.name, "position": role.position} if role else None})
     except web.HTTPException: raise
     except (ValueError, TypeError) as exc: raise web.HTTPBadRequest(text=f"Invalid role data: {exc}")
@@ -97,12 +97,20 @@ async def api_role_action(self, request):
 
 
 async def api_audit(self, request):
-    guild=await _guild(self,request); await self._require_admin(request,guild); limit=max(1,min(int(request.query.get("limit",100)),200)); items=[]
+    guild=await _guild(self,request)
+    await self._require_admin(request,guild)
+    limit=max(1,min(int(request.query.get("limit",100)),200))
+    items=[]
     try:
         async for entry in guild.audit_logs(limit=limit):
             items.append({"id":str(entry.id),"action":str(entry.action),"user_id":str(entry.user.id) if entry.user else None,"user":str(entry.user) if entry.user else None,"target_id":str(getattr(entry.target,"id","")) if getattr(entry.target,"id",None) else None,"target":str(entry.target) if entry.target else None,"reason":entry.reason,"created_at":entry.created_at.isoformat()})
-    except discord.Forbidden as exc: raise web.HTTPForbidden(text=f"Audit log access denied: {exc}")
-    return web.json_response({"entries":entries})
+    except discord.Forbidden:
+        # Audit Log is optional for the dashboard. Do not turn a missing Discord
+        # permission into a scary toast or prevent the rest of Server Control from loading.
+        return web.json_response({"entries":[],"available":False,"reason":"View Audit Log permission is missing for the Red Sentinel bot."})
+    except discord.HTTPException as exc:
+        return web.json_response({"entries":[],"available":False,"reason":f"Discord audit log request failed: {exc}"})
+    return web.json_response({"entries":items,"available":True})
 
 
 async def api_guild_control(self, request):
