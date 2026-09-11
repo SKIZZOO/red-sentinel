@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import discord
 from aiohttp import web
 
 
@@ -78,5 +79,57 @@ async def api_events_rich(self, request):
     return web.json_response(rows)
 
 
+async def api_delete_log_message(self, request):
+    gid = int(request.match_info["guild_id"])
+    guild = self.bot.get_guild(gid)
+    if guild is None:
+        raise web.HTTPNotFound(text="Guild not found.")
+    await self._require_admin(request, guild)
+    data = await self._json(request)
+    try:
+        cid = int(str(data.get("channel_id") or ""))
+        mid = int(str(data.get("message_id") or ""))
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="A valid channel ID and message ID are required.")
+
+    channel = guild.get_channel(cid)
+    if channel is None:
+        try:
+            channel = await self.bot.fetch_channel(cid)
+        except discord.NotFound:
+            raise web.HTTPNotFound(text="Discord channel no longer exists.")
+        except discord.Forbidden:
+            raise web.HTTPForbidden(text="Discord denied access to that channel.")
+        except discord.HTTPException as exc:
+            raise web.HTTPBadRequest(text=f"Discord channel lookup failed: {exc}")
+
+    if getattr(channel, "guild", None) is not None and channel.guild.id != guild.id:
+        raise web.HTTPForbidden(text="Channel does not belong to this server.")
+    if not isinstance(channel, (discord.TextChannel, discord.Thread)):
+        raise web.HTTPBadRequest(text="That log does not point to a deletable text channel or thread.")
+
+    try:
+        message = await channel.fetch_message(mid)
+    except discord.NotFound:
+        raise web.HTTPNotFound(text="Message not found. It may already have been deleted from Discord.")
+    except discord.Forbidden:
+        raise web.HTTPForbidden(text="Discord denied access to that message. Check View Channel, Read Message History and Manage Messages.")
+    except discord.HTTPException as exc:
+        raise web.HTTPBadRequest(text=f"Discord rejected the message lookup: {exc}")
+
+    try:
+        await message.delete(reason="Red Sentinel dashboard — delete from Live Logs")
+    except discord.NotFound:
+        raise web.HTTPNotFound(text="Message was already deleted from Discord.")
+    except discord.Forbidden:
+        raise web.HTTPForbidden(text="Discord denied deleting the message. The bot needs Manage Messages in that channel.")
+    except discord.HTTPException as exc:
+        raise web.HTTPBadRequest(text=f"Discord rejected deleting the message: {exc}")
+
+    await self._log_event(guild, "admin.delete", channel=channel, payload={"message_id": str(mid), "source": "live_logs"})
+    return web.json_response({"ok": True, "message_id": str(mid)})
+
+
 def patch_logs_api(RedSentinel):
     RedSentinel.api_events = api_events_rich
+    RedSentinel.api_delete = api_delete_log_message
