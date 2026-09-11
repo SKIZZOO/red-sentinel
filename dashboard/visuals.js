@@ -9,8 +9,9 @@
     const bindRipple=()=>{document.querySelectorAll('button').forEach(btn=>{if(btn.dataset.ripple)return;btn.dataset.ripple='1';btn.style.position='relative';btn.style.overflow='hidden';btn.addEventListener('pointerdown',e=>{const r=btn.getBoundingClientRect(),size=Math.max(r.width,r.height)*1.4,dot=document.createElement('i');dot.style.cssText=`position:absolute;width:${size}px;height:${size}px;left:${e.clientX-r.left-size/2}px;top:${e.clientY-r.top-size/2}px;border-radius:50%;background:rgba(255,255,255,.16);transform:scale(0);pointer-events:none;animation:rs-ripple .6s ease-out forwards`;btn.appendChild(dot);setTimeout(()=>dot.remove(),650)})})};
     const bindAll=()=>{bindMagnetic();bindTilt();bindRipple()};const style=document.createElement('style');style.textContent='@keyframes rs-ripple{to{transform:scale(1);opacity:0}}';document.head.appendChild(style);bindAll();new MutationObserver(bindAll).observe(document.body,{childList:true,subtree:true});
   }
-  if(!document.querySelector('link[data-chat-css]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./chat.css?v=20260911-1';l.dataset.chatCss='1';document.head.appendChild(l)}
-  if(!document.querySelector('script[data-chat-js]')){const s=document.createElement('script');s.src='./chat.js?v=20260911-1';s.dataset.chatJs='1';document.body.appendChild(s)}
-  if(!document.querySelector('link[data-logs-css]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./logs.css?v=20260911-3';l.dataset.logsCss='1';document.head.appendChild(l)}
-  if(!document.querySelector('script[data-logs-js]')){const s=document.createElement('script');s.src='./logs-enhancements.js?v=20260911-3';s.dataset.logsJs='1';document.body.appendChild(s)}
+  const load=(kind,tag,src)=>{if(document.querySelector(`[data-${kind}]`))return;const e=document.createElement(tag);e.src=src;e.dataset[kind]='1';document.body.appendChild(e)};
+  const css=(kind,src)=>{if(document.querySelector(`[data-${kind}]`))return;const e=document.createElement('link');e.rel='stylesheet';e.href=src;e.dataset[kind]='1';document.head.appendChild(e)};
+  css('chat-css','./chat.css?v=20260911-6');load('chat-js','script','./chat.js?v=20260911-6');
+  css('logs-css','./logs.css?v=20260911-3');load('logs-js','script','./logs-enhancements.js?v=20260911-3');
+  css('moderation-css','./moderation.css?v=20260911-1');load('moderation-js','script','./moderation.js?v=20260911-2');
 })();
