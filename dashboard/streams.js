@@ -11,6 +11,15 @@
   };
   function platformIcon(p, cls=''){ const key=(p||'').toLowerCase(); return `<span class="stream-platform-icon ${esc(key)} ${cls}">${platformSvg[key]||''}</span>`; }
   function gid(){ return String(window.rsState?.guild || ''); }
+  function sourceStatus(x){
+    if(x.live) return '<span class="live-pill is-live">● LIVE</span>';
+    if(x.last_error) return '<span class="live-pill is-error">! CHECK ERROR</span>';
+    return `<span class="live-pill">${x.enabled?'● MONITORING':'○ PAUSED'}</span>`;
+  }
+  function checkedAt(x){
+    if(!x.last_checked)return 'Never checked';
+    const d=new Date(Number(x.last_checked)*1000);return `Checked ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+  }
   async function loadStreams(){
     if(!gid()) return;
     try{
@@ -28,11 +37,12 @@
   function render(items){
     const box=$('#streamList'); if(!box)return;
     if(!items.length){box.innerHTML='<div class="stream-empty"><div class="empty-icon">◉</div><b>No livestream sources yet</b><span>Add a Twitch, YouTube or Kick channel and choose a Discord destination.</span></div>';return;}
-    box.innerHTML=items.map(x=>`<div class="stream-item ${x.enabled?'':'disabled'}"><div class="stream-brand ${esc(x.platform)}">${platformIcon(x.platform)}</div><div class="stream-main"><div class="stream-name"><b>${esc(x.name)}</b><span class="live-pill ${x.live?'is-live':''}">${x.live?'● LIVE':x.enabled?'● MONITORING':'○ PAUSED'}</span></div><div class="stream-platform-name">${esc((x.platform||'').toUpperCase())}</div><small>${esc(x.url)}</small><small>→ Discord channel ${esc(x.channel_id)}</small></div><div class="stream-actions"><button class="ghost stream-toggle" data-id="${esc(x.id)}">${x.enabled?'Pause':'Resume'}</button><button class="danger stream-delete" data-id="${esc(x.id)}">Remove</button></div></div>`).join('');
+    box.innerHTML=items.map(x=>`<div class="stream-item ${x.enabled?'':'disabled'}"><div class="stream-brand ${esc(x.platform)}">${platformIcon(x.platform)}</div><div class="stream-main"><div class="stream-name"><b>${esc(x.name)}</b>${sourceStatus(x)}</div><div class="stream-platform-name">${esc((x.platform||'').toUpperCase())} · ${checkedAt(x)}</div><small>${esc(x.url)}</small><small>→ Discord channel ${esc(x.channel_id)}</small>${x.last_error?`<small class="stream-error">${esc(x.last_error)}</small>`:''}</div><div class="stream-actions"><button class="ghost stream-check" data-id="${esc(x.id)}">Check now</button><button class="ghost stream-toggle" data-id="${esc(x.id)}">${x.enabled?'Pause':'Resume'}</button><button class="danger stream-delete" data-id="${esc(x.id)}">Remove</button></div></div>`).join('');
+    box.querySelectorAll('.stream-check').forEach(b=>b.onclick=()=>action('check',b.dataset.id));
     box.querySelectorAll('.stream-toggle').forEach(b=>b.onclick=()=>action('toggle',b.dataset.id));
     box.querySelectorAll('.stream-delete').forEach(b=>b.onclick=()=>action('delete',b.dataset.id));
   }
-  async function action(action,id){try{const r=await api(`/api/guilds/${gid()}/streams`,{method:'POST',body:JSON.stringify({action,id})});render(r.sources||[]);if($('#streamCount'))$('#streamCount').textContent=`${(r.sources||[]).length} sources`;toast(action==='delete'?'Livestream removed':`Livestream ${action==='toggle'?'updated':'saved'}`)}catch(e){toast('Livestream action failed: '+e.message)}}
+  async function action(action,id){try{const r=await api(`/api/guilds/${gid()}/streams`,{method:'POST',body:JSON.stringify({action,id})});render(r.sources||[]);if($('#streamCount'))$('#streamCount').textContent=`${(r.sources||[]).length} sources`;if(action==='check'){const x=(r.sources||[]).find(s=>String(s.id)===String(id));toast(x?.live?'Livestream detected as LIVE':'Livestream check completed');}else toast(action==='delete'?'Livestream removed':`Livestream ${action==='toggle'?'updated':'saved'}`)}catch(e){toast('Livestream action failed: '+e.message)}}
   async function add(){
     const url=$('#streamUrl')?.value.trim()||''; if(!url)return toast('Add a livestream URL first.');
     try{const r=await api(`/api/guilds/${gid()}/streams`,{method:'POST',body:JSON.stringify({action:'add',platform:$('#streamPlatform')?.value,name:$('#streamName')?.value,url,channel_id:$('#streamChannel')?.value,title:$('#streamTitle')?.value,image:$('#streamImage')?.value,mention_everyone:$('#streamMention')?.checked})});render(r.sources||[]);$('#streamUrl').value='';$('#streamName').value='';$('#streamTitle').value='';$('#streamImage').value='';$('#streamMention').checked=false;if($('#streamCount'))$('#streamCount').textContent=`${(r.sources||[]).length} sources`;toast('Livestream source added. Monitoring is active.')}catch(e){toast('Could not add livestream: '+e.message)}
@@ -41,11 +51,11 @@
   function boot(){
     $('#addStream')?.addEventListener('click',add); $('#saveStreamSettings')?.addEventListener('click',saveSettings);
     const old=window.showView;
-    if(old && !window.__streamViewPatched){ window.__streamViewPatched=true; window.showView=async v=>{const r=old(v);if(v==='streams')await loadStreams();return r}; window.navigate=window.showView; }
+    if(old && !window.__streamViewPatched){ window.__streamViewPatched=true; window.showView=async v=>{const r=old(v);if(v==='streams')await loadStreams();return r;}; window.navigate=window.showView; }
     document.addEventListener('change',e=>{if(e.target?.id==='guildSelect' && $('#view-streams')?.classList.contains('active'))setTimeout(loadStreams,150)});
     if($('#view-streams')?.classList.contains('active'))loadStreams();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
   window.loadStreams=loadStreams;
-  if(!window.__redSentinelChatLoader){window.__redSentinelChatLoader=true;const load=()=>{if(document.querySelector('script[data-rs-chat]'))return;const s=document.createElement('script');s.src='./chat.js?v=20260911-2';s.dataset.rsChat='1';document.head.appendChild(s);const c=document.createElement('link');c.rel='stylesheet';c.href='./chat.css?v=20260911-2';document.head.appendChild(c)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load()}
+  if(!window.__redSentinelChatLoader){window.__redSentinelChatLoader=true;const load=()=>{if(document.querySelector('script[data-rs-chat]'))return;const s=document.createElement('script');s.src='./chat.js?v=20260911-7';s.dataset.rsChat='1';document.head.appendChild(s);const c=document.createElement('link');c.rel='stylesheet';c.href='./chat.css?v=20260911-7';document.head.appendChild(c)};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load()}
 })();
