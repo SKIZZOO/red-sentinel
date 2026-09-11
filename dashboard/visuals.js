@@ -21,5 +21,6 @@
   css('server-polish-css','./server-polish.css?v=20260911-6');
   css('server-layout-fix-css','./server-layout-fix.css?v=20260911-4');
   css('server-display-tiers-css','./server-display-tiers.css?v=20260911-1');
+  css('server-viewport-fit-css','./server-viewport-fit.css?v=20260911-1');
   load('server-fix-js','script','./server-fix.js?v=20260911-1');load('platform-icons-js','script','./platform-icons.js?v=20260911-1');
 })();
