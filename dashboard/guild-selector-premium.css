@@ -1,0 +1,35 @@
+/* Red Sentinel — premium guild selector inspired by Pryzm glass/grain,
+   OneWorks visual focus, OriginKit modular controls, Kinetics motion. */
+.guild-picker{position:relative;display:block;width:min(390px,38vw);min-width:260px;z-index:120}
+.guild-picker native-select{display:none}
+.guild-picker__trigger{width:100%;min-height:50px;padding:7px 10px 7px 9px;border:1px solid rgba(170,140,255,.24);border-radius:16px;background:linear-gradient(135deg,rgba(28,20,52,.88),rgba(10,12,22,.94));color:#f7f5ff;display:grid;grid-template-columns:38px minmax(0,1fr) 26px;align-items:center;gap:10px;cursor:pointer;box-shadow:0 12px 38px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.06);transition:transform .22s cubic-bezier(.34,1.56,.64,1),border-color .25s,box-shadow .25s,background .25s}
+.guild-picker__trigger:hover{transform:translateY(-1px);border-color:rgba(176,145,255,.52);box-shadow:0 18px 46px rgba(65,34,150,.24),0 0 0 1px rgba(165,132,255,.08) inset}
+.guild-picker.open .guild-picker__trigger{border-color:rgba(185,157,255,.68);box-shadow:0 0 0 3px rgba(124,92,252,.12),0 22px 60px rgba(45,25,105,.3)}
+.guild-picker__orb{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:13px;letter-spacing:-.04em;background:radial-gradient(circle at 30% 25%,#b99bff,#6e47ef 46%,#211546 100%);box-shadow:inset 0 1px rgba(255,255,255,.28),0 0 28px rgba(125,82,255,.35);position:relative;overflow:hidden}
+.guild-picker__orb:after{content:"";position:absolute;inset:-30%;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.25) 50%,transparent 68%);transform:translateX(-70%) rotate(10deg);animation:guild-shine 5.5s linear infinite}
+.guild-picker__copy{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
+.guild-picker__name{font-size:14px;font-weight:780;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.guild-picker__meta{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#7e7890;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.guild-picker__chev{font-size:16px;color:#bcaaff;text-align:center;transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.guild-picker.open .guild-picker__chev{transform:rotate(180deg)}
+.guild-picker__menu{position:absolute;top:calc(100% + 9px);right:0;width:100%;padding:9px;border:1px solid rgba(170,140,255,.2);border-radius:18px;background:linear-gradient(145deg,rgba(17,15,29,.98),rgba(8,10,18,.98));box-shadow:0 26px 90px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.02) inset;backdrop-filter:blur(28px) saturate(140%);opacity:0;visibility:hidden;transform:translateY(-8px) scale(.985);transform-origin:top right;transition:opacity .2s ease,transform .24s cubic-bezier(.34,1.56,.64,1),visibility .2s;overflow:hidden}
+.guild-picker.open .guild-picker__menu{opacity:1;visibility:visible;transform:none}
+.guild-picker__search{display:flex;align-items:center;gap:8px;padding:0 10px;height:40px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(6,7,12,.68);margin-bottom:8px}
+.guild-picker__search span{color:#7f7891;font-size:13px}
+.guild-picker__search input{border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important;margin:0!important;min-width:0;font-size:12px}
+.guild-picker__list{max-height:320px;overflow:auto;padding-right:2px}
+.guild-picker__item{width:100%;display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:9px;padding:9px;border:1px solid transparent;border-radius:12px;background:transparent;color:#e9e6f4;text-align:left;cursor:pointer;transition:transform .18s cubic-bezier(.34,1.56,.64,1),background .2s,border-color .2s}
+.guild-picker__item:hover{transform:translateX(3px);background:linear-gradient(90deg,rgba(139,92,246,.11),rgba(139,92,246,.035));border-color:rgba(150,115,255,.18)}
+.guild-picker__item.is-active{background:linear-gradient(90deg,rgba(139,92,246,.16),rgba(139,92,246,.055));border-color:rgba(160,128,255,.24);box-shadow:inset 0 0 24px rgba(124,92,252,.05)}
+.guild-picker__item-orb{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:12px;font-weight:850;background:linear-gradient(145deg,#35205c,#171323);border:1px solid rgba(167,133,255,.18);color:#cab9ff}
+.guild-picker__item-copy{min-width:0;display:flex;flex-direction:column;gap:2px}
+.guild-picker__item-name{font-size:12px;font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.guild-picker__item-meta{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:#777285}
+.guild-picker__check{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:#45e8a6;background:rgba(57,230,161,.08);border:1px solid rgba(57,230,161,.16);font-size:10px;opacity:0;transform:scale(.75);transition:opacity .2s,transform .2s}
+.guild-picker__item.is-active .guild-picker__check{opacity:1;transform:none}
+.guild-picker__empty{padding:18px 10px;color:#797388;font-size:11px;text-align:center}
+@keyframes guild-shine{0%,35%{transform:translateX(-75%) rotate(10deg)}55%,100%{transform:translateX(95%) rotate(10deg)}}
+@media(max-width:1100px){.guild-picker{width:min(330px,40vw);min-width:230px}.guild-picker__trigger{min-height:46px}.guild-picker__orb{width:34px;height:34px}.guild-picker__name{font-size:13px}}
+@media(max-width:800px){.guild-picker{width:100%;min-width:0}.guild-picker__menu{left:0;right:auto;width:100%}}
+@media(max-width:560px){.guild-picker__trigger{min-height:44px;border-radius:14px}.guild-picker__copy{gap:1px}.guild-picker__name{font-size:12px}.guild-picker__meta{font-size:8px}}
+@media(prefers-reduced-motion:reduce){.guild-picker__trigger,.guild-picker__menu,.guild-picker__item,.guild-picker__chev{transition:none}.guild-picker__orb:after{animation:none}}
